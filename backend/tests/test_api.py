@@ -362,3 +362,19 @@ def test_tg_weight_override_changes_eligibility_and_is_audited(client: TestClien
     assert unknown.status_code == 422
     audit = client.get("/api/v1/audit", headers=headers, params={"action": "TG_WEIGHTS_UPDATE"}).json()["items"]
     assert any(a["details"]["changes"][0]["before"] == lg["reference_tg_weight"] for a in audit)
+
+
+def test_session_commits_before_the_response_is_sent() -> None:
+    """Read-your-writes: a client must be able to GET what a POST just returned (no commit-after-response race)."""
+    from typing import get_args
+
+    from app.api.deps import SessionDep
+
+    assert get_args(SessionDep)[1].scope == "function"
+
+
+def test_created_mission_is_immediately_readable(client: TestClient) -> None:
+    headers = login(client, "planner")
+    created = client.post("/api/v1/missions", json=M_A, headers=headers)
+    assert created.status_code == 201
+    assert client.get(f"/api/v1/missions/{created.json()['mission_id']}", headers=headers).status_code == 200

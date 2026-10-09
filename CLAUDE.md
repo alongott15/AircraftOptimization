@@ -86,7 +86,7 @@ React app (dashboard, fleet + 3D apron, aircraft + 3D viewer + 2D fallback, miss
 horizon planning, missions, settings incl. editable score weights / tolerance policy / touch-and-go weights,
 audit; dashboard alerts for assigned missions that lost eligibility; 14/30/90-day timeline), `make user` CLI, CI
 workflow, Docker compose verified. Security review and two compliance-safety review passes (2026-10-09) addressed.
-Tests: 382 backend (+1 perf, +1 real-Vertica skip), 22 vitest, 9 Playwright E2E. PRD §6 FR-01…FR-82 audited
+Tests: 384 backend (+1 perf, +1 real-Vertica skip), 22 vitest, 9 Playwright E2E. PRD §6 FR-01…FR-82 audited
 2026-10-09: all implemented.
 
 Not yet: native-speaker review of `he.ts` (self-reviewed only); integration against a real Vertica and a real IdP

@@ -38,7 +38,10 @@ def get_session(c: ContainerDep) -> Iterator[Session]:
         session.close()
 
 
-SessionDep = Annotated[Session, Depends(get_session)]
+# scope="function": commit/rollback runs when the route function returns, *before* the response is sent. With the
+# default ("request") the commit ran after the response, so a client that immediately read what it had just created
+# (e.g. open the new mission) could get 404 — a read-your-writes race seen on slow CI runners.
+SessionDep = Annotated[Session, Depends(get_session, scope="function")]
 
 
 def current_user(request: Request, c: ContainerDep, s: SessionDep) -> SessionUser:
