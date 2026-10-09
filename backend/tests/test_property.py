@@ -11,7 +11,7 @@ from hypothesis import strategies as st
 
 from app.domain.compliance.evaluator import evaluate_eligibility
 from app.domain.compliance.status import aircraft_status
-from app.domain.models import STATUS_SEVERITY, ComplianceStatus, Unit
+from app.domain.models import STATUS_SEVERITY, ComplianceStatus, ExpiryWindow, Unit
 from app.domain.optimization.cpsat_selector import SelectionCandidate, select
 from app.domain.optimization.scoring import ScoringInputs, score_candidate
 from app.domain.policy import SCORE_TERMS, WEIGHT_PRESETS, PlanningPolicy, normalize_weights
@@ -54,7 +54,7 @@ def test_p2_removing_data_never_helps(rfh, rldg, pdays, unit) -> None:  # type: 
         assert not partial.eligible
 
 
-admin_weights = st.lists(st.floats(min_value=0, max_value=10), min_size=6, max_size=6).filter(lambda w: sum(w) > 0)
+admin_weights = st.lists(st.floats(min_value=0, max_value=10), min_size=7, max_size=7).filter(lambda w: sum(w[:6]) > 0)
 
 
 @settings(max_examples=60, deadline=None)
@@ -69,11 +69,11 @@ def test_p3_p7_ml_and_weights_never_change_eligibility_and_selection_is_subset( 
               preset: normalize_weights(dict(zip(SCORE_TERMS, custom, strict=True)))}
     policy = replace(P.with_overrides({"weights_preset": preset, "tolerance_policy": tolerance}),
                      preset_weights=edited)
-    m = a_mission()
+    m = a_mission(expiry_windows=(ExpiryWindow(Unit.FH, 0, 1000), ExpiryWindow(Unit.CAL_DAY, 0, 3650)))
     results = [evaluate_eligibility(replace(build(*s), aircraft_id=i + 1, tail_number=f"4X-T{i:02d}"), m, policy,
                                     ctx()) for i, s in enumerate(specs)]
-    baseline = [evaluate_eligibility(replace(build(*s), aircraft_id=i + 1, tail_number=f"4X-T{i:02d}"), m, P,
-                                     ctx()).eligible for i, s in enumerate(specs)]
+    baseline = [evaluate_eligibility(replace(build(*s), aircraft_id=i + 1, tail_number=f"4X-T{i:02d}"), a_mission(), P,
+                                     ctx()).eligible for i, s in enumerate(specs)]  # no bands, default weights
     assert [r.eligible for r in results] == baseline  # P3
     eligible = [r for r in results if r.eligible]
     scored = [score_candidate(r, ScoringInputs("TP-200", "CEN", probs[i], 10, 10, 2), "CEN", policy)

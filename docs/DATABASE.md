@@ -428,7 +428,7 @@ JT-300: IFR, NIGHT, PAX, CARGO, OVERWATER, ICING.
 - Deterministic for a given `--seed` and `--anchor`.
 - Steps: (1) reference data → (2) fleet of 24 aircraft → (3) simulate 18 months of flights and defects (§6.3) →
   (4) derive counters = initial TSN + Σ flight_log → (5) set healthy due state (§6.4) → (6) apply scenarios (§6.2) →
-  (7) app-store: demo users, policy defaults, weight presets, hangar capacity, seeded mission `M-SEED-01` →
+  (7) app-store: demo users, policy defaults, weight presets, hangar capacity, seeded mission `"אימון בוקר — משימה קיימת"` →
   (8) `data_load_status` = T0 for all sources.
 - Demo users: one per role (`planner`, `maint`, `ops`, `admin`); password from `APP_DEMO_PASSWORD` in `.env`
   (template in `.env.example`); never hard-coded in source.
@@ -455,7 +455,7 @@ Tail numbers contain a digit and are therefore fictional (real 4X registrations 
 | SC-13a | 4X-P01 | Best-fit candidate | `A_CHECK.FH due_value = FH + 5.0` | EXPIRING_SOON |
 | SC-13b | 4X-P03 | Misses by 0.2 h | `A_CHECK.FH due_value = FH + 4.4` | EXPIRING_SOON |
 | SC-14 | 4X-J03 | In hangar | `status = IN_MAINTENANCE` | IN_MAINTENANCE |
-| SC-15 | 4X-S08 | Already assigned | assignment to `M-SEED-01` window T0 + 1 h → T0 + 4 h | OK |
+| SC-15 | 4X-S08 | Already assigned | assignment to `"אימון בוקר — משימה קיימת"` window T0 + 1 h → T0 + 4 h | OK |
 | SC-16 | 4X-P06 | Annual due in 3 days | `ANNUAL.due_at = T0 + 3 d` | EXPIRING_SOON |
 
 All other tails (`S01, S04, S06, P07, P10, J01, J05`) are healthy (§6.4).

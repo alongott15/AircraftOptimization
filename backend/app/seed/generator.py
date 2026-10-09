@@ -394,9 +394,10 @@ class Generator:
                 iso = (t0 + timedelta(weeks=w)).isocalendar()
                 s.add(orm.HangarCapacityRow(base_code=base, iso_week=f"{iso.year}-W{iso.week:02d}", slots=2))
         s.flush()
-        # SC-15: M-SEED-01 already assigned to 4X-S08, window T0+1h → T0+4h (1.7 h + 0.3 h floor + 1 h turnaround)
+        # SC-15: the existing mission is assigned to 4X-S08, window T0+1h → T0+4h
+        # (1.7 h + 0.3 h floor + 1 h turnaround)
         mission = orm.MissionRow(
-            mission_id=1, name="M-SEED-01 אימון בוקר", mission_type="TRAINING", status="ASSIGNED",
+            mission_id=1, name="אימון בוקר — משימה קיימת", mission_type="TRAINING", status="ASSIGNED",
             required_aircraft_count=1, start_at=t0 + timedelta(hours=1), est_duration_hours=1.7, est_landings=1,
             est_touch_and_goes=4, est_engine_starts=1, departure_base_code="CEN", engine_requirement="SINGLE",
             same_type_required=False, priority=3, notes=None, overrides_json=None, created_by=1, created_at=t0,

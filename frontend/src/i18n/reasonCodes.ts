@@ -147,7 +147,12 @@ export const REASON_TEMPLATES: Record<string, Template> = {
   TOLERANCE_AVAILABLE: (p, nm) =>
     `קיימת טולרנס של ${n(p.tolerance)} ${nm.unit(p.unit)} ל${nm.inspection(p.inspection_code)} — שימוש בה באישור גורם מוסמך בלבד`,
   IDLE_CHECK_REQUIRED: (p) => `נדרשת בדיקה לאחר השבתה לפני הטיסה (${n(p.idle_days, 0)} ימים ללא טיסה)`,
-  ML_MODEL_UNAVAILABLE: (p) => `המודל "${s(p.model_name)}" אינו זמין — הדירוג חושב ללא רכיב זה`,
+  ML_MODEL_UNAVAILABLE: (p) =>
+    `${tk(`model.${s(p.model_name)}`, undefined, s(p.model_name))} אינו זמין — הדירוג חושב ללא רכיב זה`,
+  EXPIRES_WITHIN_WINDOW: (p, nm) => {
+    const amount = (v: unknown) => (p.unit === 'CAL_DAY' ? `${n(v, 0)} ימים` : `${n(v)} ${nm.unit(p.unit)}`);
+    return `תוקף ${nm.ref(p.source, p.ref)} יפוג בטווח "תוך ${n(p.within, 0)} ועד ${amount(p.until)}": נותרו ${amount(p.margin)} לאחר המשימה`;
+  },
   NON_GROUNDING_PERMIT_INVALID: (p, nm) =>
     p.outcome === 'EXPIRED'
       ? `תוקף ${nm.permit(p.permit_type_code)} פג (היתר שאינו מקרקע — לבדיקת גורם מוסמך)`

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.db import orm
 from app.domain.models import CommittedMission
-from app.domain.policy import WEIGHT_PRESETS, PlanningPolicy, normalize_weights
+from app.domain.policy import SCORE_TERMS, WEIGHT_PRESETS, PlanningPolicy, normalize_weights
 
 _log = logging.getLogger(__name__)
 
@@ -33,8 +33,15 @@ def load_weights(s: Session) -> dict[str, dict[str, float]]:
     out = {code: dict(w) for code, w in WEIGHT_PRESETS.items()}
     for row in s.scalars(select(orm.WeightPresetRow)):
         try:
-            out[row.preset_code] = normalize_weights(json.loads(row.weights_json))
-        except (ValueError, TypeError):
+            stored = json.loads(row.weights_json)
+            legacy = set(SCORE_TERMS) - {"expiry_window"}
+            if (row.preset_code in WEIGHT_PRESETS and isinstance(stored, dict) and set(stored) == legacy
+                    and sum(stored.values()) > 0):
+                # preset saved before the window term existed: keep the admin's ratios, add the term's default
+                total, window = sum(stored.values()), WEIGHT_PRESETS[row.preset_code]["expiry_window"]
+                stored = {**{t: w / total * (1 - window) for t, w in stored.items()}, "expiry_window": window}
+            out[row.preset_code] = normalize_weights(stored)
+        except (ValueError, TypeError, AttributeError):
             _log.warning("weight_preset.unreadable", extra={"preset_code": row.preset_code})  # built-in used
     return out
 

@@ -36,7 +36,7 @@ export const qk = {
   reference: ['reference'] as const,
   summary: ['fleet', 'summary'] as const,
   alerts: ['fleet', 'alerts'] as const,
-  timeline: (days: number) => ['fleet', 'timeline', days] as const,
+  timeline: (days: number, units: string, until: string) => ['fleet', 'timeline', days, units, until] as const,
   freshness: ['fleet', 'freshness'] as const,
   aircraftList: (q: Query) => ['aircraft', 'list', q] as const,
   aircraft: (tail: string) => ['aircraft', 'detail', tail] as const,
@@ -64,10 +64,11 @@ export const useFleetSummary = () =>
 export const useAlerts = () =>
   useQuery({ queryKey: qk.alerts, queryFn: () => api<Alert[]>('/fleet/alerts', { query: { limit: 200 } }), retry });
 
-export const useTimeline = (days: number) =>
+/** FR-13/14: items expiring within `days` — or until `until` (YYYY-MM-DD) — optionally only in `units`. */
+export const useTimeline = (days: number, units: string[] = [], until = '') =>
   useQuery({
-    queryKey: qk.timeline(days),
-    queryFn: () => api<TimelineItem[]>('/fleet/timeline', { query: { days } }),
+    queryKey: qk.timeline(days, units.join(','), until),
+    queryFn: () => api<TimelineItem[]>('/fleet/timeline', { query: { days, units: units.join(','), until } }),
     retry,
   });
 

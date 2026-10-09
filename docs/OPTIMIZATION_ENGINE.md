@@ -240,6 +240,18 @@ and returned to the UI.
 
 ---
 
+### 3.4 Expiration "avoid band" (FR-34)
+A mission may carry `expiry_windows` — at most one per activity unit (FH, LDG, TG, CYC, ENG_START, CAL_DAY), each a
+band `within ≤ margin ≤ until` ("תוך … ועד …") with **both bounds in that unit**: `margin` is what remains after the
+mission (`remaining_after` for usage units; days from mission end to the expiry date for CAL_DAY). For each
+**eligible** aircraft a band is *hit* when any of its items in that unit (inspection, permit, deferral,
+qualification — not idle) falls inside it. No forecast is involved.
+- Term `expiry_window` = share of bands not hit (1.0 = all respected). Default weight 0.15 (other terms × 0.85).
+  Without windows the term's weight is 0 and the rest renormalize — scores are identical to the pre-FR-34 ones.
+- Every hit adds warning `EXPIRES_WITHIN_WINDOW {source, ref, unit, margin, within, until}`;
+  these warnings are not double-counted by the `warnings` term.
+- Eligibility is never affected (BR-14); planner windows only change ranking, alternatives and the horizon plan.
+
 ## 4. ML models (`backend/app/ml/`)
 
 All models: scikit-learn, deterministic `random_state=42`, artifacts saved with `joblib` to `data/models/<name>/<version>/`

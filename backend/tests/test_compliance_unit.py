@@ -461,7 +461,8 @@ def test_tolerance_policy_never_hides_the_tolerance_hint_and_never_grants_eligib
 def test_weights_are_normalized_and_validated() -> None:
     from app.domain.policy import normalize_weights
 
-    w = normalize_weights({"risk": 2, "best_fit": 2, "balance": 0, "capacity": 0, "base_match": 0, "warnings": 0})
+    w = normalize_weights({"risk": 2, "best_fit": 2, "balance": 0, "capacity": 0, "base_match": 0, "warnings": 0,
+                           "expiry_window": 0})
     assert w["risk"] == 0.5 and sum(w.values()) == pytest.approx(1.0)
     with pytest.raises(ValueError, match="exactly the score terms"):
         normalize_weights({"risk": 1})

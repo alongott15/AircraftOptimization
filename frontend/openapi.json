@@ -287,6 +287,22 @@
        "default": 100,
        "title": "Limit"
       }
+     },
+     {
+      "name": "units",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Units"
+      }
      }
     ],
     "responses": {
@@ -335,6 +351,39 @@
        "minimum": 1,
        "default": 30,
        "title": "Days"
+      }
+     },
+     {
+      "name": "units",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Units"
+      }
+     },
+     {
+      "name": "until",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Until"
       }
      }
     ],
@@ -527,6 +576,23 @@
        "minimum": 1,
        "default": 50,
        "title": "Page Size"
+      }
+     },
+     {
+      "name": "expiry",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Expiry"
       }
      }
     ],
@@ -2964,6 +3030,66 @@
     ],
     "title": "EligibilityCheckIn"
    },
+   "ExpiryWindowIn": {
+    "properties": {
+     "unit": {
+      "type": "string",
+      "enum": [
+       "FH",
+       "LDG",
+       "TG",
+       "CYC",
+       "ENG_START",
+       "CAL_DAY"
+      ],
+      "title": "Unit"
+     },
+     "within": {
+      "type": "number",
+      "maximum": 100000.0,
+      "minimum": 0.0,
+      "title": "Within",
+      "default": 0
+     },
+     "until": {
+      "type": "number",
+      "maximum": 100000.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Until"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "unit",
+     "until"
+    ],
+    "title": "ExpiryWindowIn",
+    "description": "\"Avoid band\" תוך … ועד … in one activity unit (days for CAL_DAY), counted after the mission. Ranking only."
+   },
+   "ExpiryWindowOut": {
+    "properties": {
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "within": {
+      "type": "number",
+      "title": "Within"
+     },
+     "until": {
+      "type": "number",
+      "title": "Until"
+     }
+    },
+    "type": "object",
+    "required": [
+     "unit",
+     "within",
+     "until"
+    ],
+    "title": "ExpiryWindowOut"
+   },
    "FleetSummaryOut": {
     "properties": {
      "as_of": {
@@ -3889,6 +4015,14 @@
      },
      "overrides": {
       "$ref": "#/components/schemas/MissionOverridesIn"
+     },
+     "expiry_windows": {
+      "items": {
+       "$ref": "#/components/schemas/ExpiryWindowIn"
+      },
+      "type": "array",
+      "maxItems": 6,
+      "title": "Expiry Windows"
      }
     },
     "additionalProperties": false,
@@ -4022,6 +4156,13 @@
       "type": "object",
       "title": "Overrides"
      },
+     "expiry_windows": {
+      "items": {
+       "$ref": "#/components/schemas/ExpiryWindowOut"
+      },
+      "type": "array",
+      "title": "Expiry Windows"
+     },
      "created_by": {
       "type": "integer",
       "title": "Created By"
@@ -4089,6 +4230,7 @@
      "force_include",
      "force_exclude",
      "overrides",
+     "expiry_windows",
      "created_by",
      "created_at",
      "updated_at",
@@ -4112,32 +4254,6 @@
       ],
       "title": "Duration Buffer Pct"
      },
-     "calendar_buffer_hours": {
-      "anyOf": [
-       {
-        "type": "number",
-        "maximum": 72.0,
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Calendar Buffer Hours"
-     },
-     "landing_buffer": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 10.0,
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Landing Buffer"
-     },
      "weights_preset": {
       "anyOf": [
        {
@@ -4157,7 +4273,8 @@
     },
     "additionalProperties": false,
     "type": "object",
-    "title": "MissionOverridesIn"
+    "title": "MissionOverridesIn",
+    "description": "Per-mission planner choices. Calendar/landing buffers are admin policy only (FR-34 replaced them in the form);\n`duration_buffer_pct` (from the ML suggestion, FR-52) can only make the FH buffer stricter than the policy."
    },
    "ModelOut": {
     "properties": {
@@ -5613,7 +5730,8 @@
          "balance",
          "capacity",
          "base_match",
-         "warnings"
+         "warnings",
+         "expiry_window"
         ]
        },
        "type": "object"

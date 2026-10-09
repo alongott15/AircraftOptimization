@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import json
+import logging
+import math
 from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.db import orm
-from app.domain.models import EngineRequirement, MissionRequest, MissionType
+from app.domain.models import WINDOW_UNITS, EngineRequirement, ExpiryWindow, MissionRequest, MissionType, Unit
 from app.repositories import store
 from app.services.errors import ServiceError, not_found, validation
 
 EDITABLE = ("DRAFT", "OPTIMIZED")
+
+
+_log = logging.getLogger(__name__)
 
 
 def iso(dt: datetime | None) -> str | None:
@@ -50,6 +55,10 @@ def upsert_mission(s: Session, payload: dict[str, Any], *, user_id: int, now: da
     if len(include) > payload["required_aircraft_count"]:
         raise validation("force_include", "VALUE_TOO_LARGE", max=payload["required_aircraft_count"])
     overrides = {k: v for k, v in (payload.get("overrides") or {}).items() if v is not None}
+    windows = [{"unit": w["unit"], "within": float(w["within"]), "until": float(w["until"])}
+               for w in payload.get("expiry_windows") or []]
+    if windows:
+        overrides[WINDOWS_KEY] = windows
     fields = {
         "name": payload["name"].strip(), "mission_type": payload["mission_type"],
         "required_aircraft_count": payload["required_aircraft_count"], "start_at": payload["start_at"],
@@ -82,8 +91,49 @@ def get_mission_or_404(s: Session, mission_id: int) -> orm.MissionRow:
     return m
 
 
+WINDOWS_KEY = "expiry_windows"  # stored in mission.overrides_json (planner preferences live together)
+
+
+# Older missions may still store calendar/landing buffer overrides; they are ignored (admin policy applies).
+MISSION_OVERRIDE_KEYS = ("duration_buffer_pct", "weights_preset")
+
+
 def overrides_of(m: orm.MissionRow) -> dict[str, Any]:
-    return json.loads(m.overrides_json) if m.overrides_json else {}
+    """The mission's allowed planner choices (FH buffer suggestion, preset) — bands are returned separately."""
+    raw = json.loads(m.overrides_json) if m.overrides_json else {}
+    return {k: v for k, v in raw.items() if k in MISSION_OVERRIDE_KEYS} if isinstance(raw, dict) else {}
+
+
+def _parse_window(w: Any) -> ExpiryWindow | None:
+    try:
+        window = ExpiryWindow(unit=Unit(w["unit"]), within=float(w["within"]), until=float(w["until"]))
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+    ok = math.isfinite(window.within) and math.isfinite(window.until) and 0 <= window.within < window.until
+    return window if ok and window.unit in WINDOW_UNITS else None
+
+
+def _windows(m: orm.MissionRow) -> list[ExpiryWindow]:
+    """Stored bands; an unreadable entry is skipped and logged — windows only affect ranking, and this is also read
+    on the safety re-check paths (assign, horizon apply, at-risk alerts), which must never fail because of it."""
+    raw = json.loads(m.overrides_json) if m.overrides_json else {}
+    stored = raw.get(WINDOWS_KEY) if isinstance(raw, dict) else None
+    out = []
+    for w in stored if isinstance(stored, list) else []:
+        parsed = _parse_window(w)
+        if parsed is None:
+            _log.warning("mission.expiry_window.unreadable", extra={"mission_id": m.mission_id})
+        else:
+            out.append(parsed)
+    return out
+
+
+def windows_of(m: orm.MissionRow) -> list[dict[str, Any]]:
+    return [{"unit": str(w.unit), "within": w.within, "until": w.until} for w in _windows(m)]
+
+
+def _domain_windows(m: orm.MissionRow) -> tuple[ExpiryWindow, ...]:
+    return tuple(_windows(m))
 
 
 def to_domain(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> MissionRequest:
@@ -97,7 +147,7 @@ def to_domain(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> Mis
         engine_requirement=EngineRequirement(m.engine_requirement), same_type_required=m.same_type_required,
         force_include=frozenset(tails_by_id[f.aircraft_id] for f in forces if f.mode == "INCLUDE"),
         force_exclude=frozenset(tails_by_id[f.aircraft_id] for f in forces if f.mode == "EXCLUDE"),
-        mission_id=m.mission_id)
+        mission_id=m.mission_id, expiry_windows=_domain_windows(m))
 
 
 def mission_out(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> dict[str, Any]:
@@ -115,7 +165,8 @@ def mission_out(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> d
         "priority": m.priority, "notes": m.notes,
         "force_include": sorted(tails_by_id[f.aircraft_id] for f in forces if f.mode == "INCLUDE"),
         "force_exclude": sorted(tails_by_id[f.aircraft_id] for f in forces if f.mode == "EXCLUDE"),
-        "overrides": overrides_of(m), "created_by": m.created_by, "created_at": iso(m.created_at),
+        "overrides": overrides_of(m), "expiry_windows": windows_of(m),
+        "created_by": m.created_by, "created_at": iso(m.created_at),
         "updated_at": iso(m.updated_at), "latest_run_id": latest.run_id if latest else None,
         "assignments": [
             {"aircraft_id": a.aircraft_id, "tail_number": tails_by_id.get(a.aircraft_id), "window_start":

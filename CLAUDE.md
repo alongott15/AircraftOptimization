@@ -84,9 +84,10 @@ RBAC, jti revocation, append-only audit, problem+json), Alembic migrations for t
 Vertica adapter over `ao_v_*` views (defensive parsing, verified TLS in prod, contract-tested on SQLite), Hebrew RTL
 React app (dashboard, fleet + 3D apron, aircraft + 3D viewer + 2D fallback, mission planner/edit/draft/results/assign,
 horizon planning, missions, settings incl. editable score weights / tolerance policy / touch-and-go weights,
-audit; dashboard alerts for assigned missions that lost eligibility; 14/30/90-day timeline), `make user` CLI, CI
+audit; dashboard alerts for assigned missions that lost eligibility; 14/30/90-day timeline; expiration bands
+"תוך … ועד …" per activity unit — mission ranking preference FR-34 replacing the buffer fields, fleet filters FR-14), `make user` CLI, CI
 workflow, Docker compose verified. Security review and two compliance-safety review passes (2026-10-09) addressed.
-Tests: 384 backend (+1 perf, +1 real-Vertica skip), 22 vitest, 9 Playwright E2E. PRD §6 FR-01…FR-82 audited
+Tests: 395 backend (+1 perf, +1 real-Vertica skip), 22 vitest, 10 Playwright E2E. PRD §6 FR-01…FR-82 audited
 2026-10-09: all implemented.
 
 Not yet: native-speaker review of `he.ts` (self-reviewed only); integration against a real Vertica and a real IdP

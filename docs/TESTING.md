@@ -106,7 +106,7 @@ present** (other reasons may also be present unless stated), and key params.
 | 4X-S03 | ✗ | `INSPECTION_EXPIRED {inspection_code: ANNUAL}` |
 | 4X-S05 | ✗ | `INSPECTION_DUE_BEFORE_MISSION_END {inspection_code: LG_INSP, unit: LDG, remaining: 5, required: 8}`; hint `UNBLOCK_MAX_LANDINGS {max_landings_plus_tg: 4}` |
 | 4X-S07 | ✗ | `IDLE_LIMIT_EXCEEDED {limit_days: 30}` |
-| 4X-S08 | ✗ | `ALREADY_ASSIGNED` (M-SEED-01) |
+| 4X-S08 | ✗ | `ALREADY_ASSIGNED` ("אימון בוקר — משימה קיימת") |
 | all 4X-P*, 4X-J* | ✗ | `ENGINE_REQUIREMENT_NOT_MET` |
 
 Recommended set: 2 of {S01, S04, S06}; `solver_status = OPTIMAL`; ≥ 1 alternative.
@@ -180,7 +180,9 @@ Backend (`backend/tests/`): `test_compliance_unit`, `test_property` (P1–P4, P6
 `test_api` (authz matrix, CSRF, validation, assignment safety, reason-code contract with `reasonCodes.ts`),
 `test_ml`, `test_horizon`, `test_oidc` (mocked IdP), `test_vertica_contract` (views on SQLite + real Vertica when
 `APP_VERTICA_DSN` is set; dirty-lake rows: NULL/NaN/unknown values must fail safe), `test_migrations` (no ORM/migration
-drift, downgrade clean), `test_openapi_snapshot`, `test_manage` (user CLI: hidden password, validation, audit). `test_api` keeps a route-coverage check: every authenticated route must
+drift, downgrade clean), `test_openapi_snapshot`, `test_manage` (user CLI: hidden password, validation, audit). FR-14/34: band evaluation (same unit), unchanged
+scores without bands, eligibility invariance with bands (P3 property, optimize, horizon), unreadable stored bands,
+fleet band/unit filters (overdue and unknown never hidden), E2E form → warning → fleet popover filter. `test_api` keeps a route-coverage check: every authenticated route must
 appear in the authz matrix. Compliance regression tests cover the 2026-10-09 safety review (commitments since snapshot,
 per-flight buffers, later assignments, NaN, programme gaps, undated permits, missing feeds, stale counters).
 Frontend: Vitest (`i18n`, `components`, `zones`), Playwright `e2e/demo.spec.ts` (8 flows incl. edit, horizon, apron).

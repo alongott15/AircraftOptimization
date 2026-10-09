@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -23,13 +25,16 @@ def _worst(statuses: list[ComplianceStatus]) -> ComplianceStatus:
     return max(statuses, key=lambda s: STATUS_SEVERITY[s], default=ComplianceStatus.OK)
 
 
+MAX_FORECAST_DAYS = 36_500  # beyond ~100 years a forecast is meaningless (and would overflow datetime)
+
+
 def predicted_due(item: ItemStatus, now: datetime, rates: dict[str, float] | None) -> datetime | None:
     if item.due_at is not None:
         return item.due_at
     if item.remaining is None or item.kind != "COUNTER" or not rates:
         return None
     rate = rates.get(item.unit, 0.0)
-    if rate <= 1e-6:
+    if rate <= 1e-6 or abs(item.remaining / rate) > MAX_FORECAST_DAYS:
         return None
     return now + timedelta(days=item.remaining / rate)
 
@@ -79,9 +84,62 @@ def fleet_summary(fc: FleetContext) -> dict[str, Any]:
     }
 
 
+@dataclass(frozen=True, slots=True)
+class ExpiryFilter:
+    """Timeline filter: items in `units` (all usage/calendar units if empty) due by `until` (FR-13/14)."""
+
+    units: frozenset[str]
+    until: datetime
+    rates: Mapping[int, Mapping[str, float]]
+
+    def item_date(self, ac: Aircraft, i: ItemStatus, now: datetime) -> datetime | None:
+        """Due date (actual, or forecast for usage items) when inside the filter, else None.
+
+        An already-expired item always matches (dated now when it has no due date or forecast) — the filter must
+        never hide an overdue item just because its usage cannot be forecast.
+        """
+        if i.source == "IDLE" or i.status == ComplianceStatus.UNKNOWN:
+            return None
+        if self.units and i.unit not in self.units:
+            return None
+        when = predicted_due(i, now, dict(self.rates.get(ac.aircraft_id, {})))
+        if i.status == ComplianceStatus.EXPIRED:
+            return min(when, now) if when is not None else now
+        return when if when is not None and when <= self.until else None
+
+
+@dataclass(frozen=True, slots=True)
+class BandFilter:
+    """Fleet-list filter (FR-14): per activity unit, a band "תוך … ועד …" in that unit (days for CAL_DAY) of what
+    remains *now*. An aircraft matches when any item in a band's unit lies inside it.
+
+    Fail-safe visibility: an aircraft with stale data, unreadable source rows, an UNKNOWN item or an EXPIRED item in a
+    filtered unit always matches — the filter narrows the list, it never hides a problem."""
+
+    bands: tuple[tuple[str, float, float], ...]
+
+    def matches(self, st: AircraftStatus) -> bool:
+        if st.stale or st.data_issues:
+            return True
+        units = {b[0] for b in self.bands}
+        for i in st.items:
+            if i.source == "IDLE":
+                continue
+            if i.status == ComplianceStatus.UNKNOWN and (not i.unit or i.unit in units):
+                return True
+            if i.unit in units and (i.status == ComplianceStatus.EXPIRED or i.remaining is None):
+                return True
+        for unit, low, high in self.bands:
+            for i in st.items:
+                if i.source != "IDLE" and i.unit == unit and i.remaining is not None and low <= i.remaining <= high:
+                    return True
+        return False
+
+
 def list_aircraft(fc: FleetContext, risks: dict[int, RiskInfo] | None, *, type_code: str | None,
                   base_code: str | None, status: str | None, compliance_status: list[str] | None,
-                  qualification_code: str | None, q: str | None, sort: str) -> list[dict[str, Any]]:
+                  qualification_code: str | None, q: str | None, sort: str,
+                  expiry: BandFilter | None = None) -> list[dict[str, Any]]:
     rows = []
     for ac in fc.aircraft:
         st = fc.status(ac)
@@ -96,6 +154,8 @@ def list_aircraft(fc: FleetContext, risks: dict[int, RiskInfo] | None, *, type_c
         if qualification_code and qualification_code not in {x.qualification_code for x in ac.qualifications}:
             continue
         if q and q.strip().upper() not in ac.tail_number.upper():
+            continue
+        if expiry is not None and not expiry.matches(st):
             continue
         rows.append(summary_row(ac, st, (risks or {}).get(ac.aircraft_id)))
     if sort == "tail_number":
@@ -206,18 +266,19 @@ def _zones_for(engine_count: int) -> list[str]:
     return [*zones, "GEAR_NOSE", "GEAR_MAIN", "TAIL"]
 
 
-def fleet_alerts(fc: FleetContext, statuses: list[str], limit: int,
-                 extra: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+def fleet_alerts(fc: FleetContext, statuses: list[str], limit: int, extra: list[dict[str, Any]] | None = None,
+                 units: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
     wanted = set(statuses)
     out: list[dict[str, Any]] = [a for a in extra or [] if a["status"] in wanted]
     for ac in fc.aircraft:
         st = fc.status(ac)
         for i in st.items:
-            if str(i.status) in wanted:
+            # unit-less alerts (data issues) are safety alerts: never filtered out by units
+            if str(i.status) in wanted and (not units or not i.unit or i.source == "IDLE" or i.unit in units):
                 out.append({"aircraft_id": ac.aircraft_id, "tail_number": ac.tail_number, "source": i.source,
                             "ref": i.ref, "unit": i.unit, "status": str(i.status), "remaining": i.remaining,
                             "due_at": iso(i.due_at), "missing_kind": i.missing_kind, "missing_code": i.missing_code})
-        if "EXPIRED" in wanted:
+        if "EXPIRED" in wanted:  # grounding MAs have no unit — always shown
             for m in ac.open_mas:
                 if m.severity == Severity.GROUNDING:
                     out.append({"aircraft_id": ac.aircraft_id, "tail_number": ac.tail_number,
@@ -229,17 +290,16 @@ def fleet_alerts(fc: FleetContext, statuses: list[str], limit: int,
     return out[:limit]
 
 
-def fleet_timeline(fc: FleetContext, days: int, util: Utilization) -> list[dict[str, Any]]:
-    horizon = fc.now + timedelta(days=days)
+def fleet_timeline(fc: FleetContext, days: int, util: Utilization, units: frozenset[str] = frozenset(),
+                   until: datetime | None = None) -> list[dict[str, Any]]:
+    """Items expiring within `days` — or until `until` when given — optionally only in `units` (FR-13/14)."""
+    window = ExpiryFilter(units, until or fc.now + timedelta(days=days), util.rates)
     out = []
     for ac in fc.aircraft:
         st = fc.status(ac)
-        rates = dict(util.rates.get(ac.aircraft_id, {}))
         for i in st.items:
-            if i.source == "IDLE" or i.status == ComplianceStatus.UNKNOWN:
-                continue
-            when = predicted_due(i, fc.now, rates)
-            if when is None or when > horizon:
+            when = window.item_date(ac, i, fc.now)
+            if when is None:
                 continue
             out.append({"aircraft_id": ac.aircraft_id, "tail_number": ac.tail_number, "source": i.source,
                         "ref": i.ref, "unit": i.unit, "status": str(i.status), "date": iso(when),

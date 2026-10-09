@@ -124,6 +124,10 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
   tables, 3D model glow and hotspot). Colour is never the only signal.
 - **FR-13 (S)** Upcoming-expirations timeline (14/30/90 days) across the fleet, using forecast utilization to
   convert FH/landing limits into predicted dates.
+- **FR-14 (S)** Expiry filter on the fleet views. Fleet list: one or more activity units (יחידות פעילות — FH,
+  landings, touch-and-go, cycles, engine starts, calendar days), each with a band "תוך X ועד Y" in that same unit of
+  what remains now (aircraft with expired, unknown, stale or unreadable data in those units are always shown). Dashboard timeline: units + 14/30/90 days or until a
+  date. Alerts: unit filter (unit-less safety alerts — grounding MAs, data issues, at-risk assignments — always shown).
 
 ### 6.3 Aircraft detail & 3D
 - **FR-20 (M)** Aircraft page with 3D model (procedural by type; engine count reflected — single nose engine vs.
@@ -147,6 +151,10 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
   force-exclude specific tails (force-include of an ineligible tail is rejected with reasons).
 - **FR-32 (M)** Validation in Hebrew (e.g. start in the past, aircraft count < 1, duration ≤ 0).
 - **FR-33 (S)** Save mission as draft; duplicate an existing mission.
+- **FR-34 (S)** Expiration "avoid band" per mission, replacing the per-mission buffer fields of FR-31 (the admin
+  policy buffers apply; only the ML duration-buffer suggestion of FR-52 can still raise a mission's FH buffer): one or
+  more activity units, each with "תוך X ועד Y" in that same unit (days for calendar), counted after the mission.
+  Aircraft with an item expiring inside a band stay **eligible** but are ranked lower and get a warning (BR-14).
 
 ### 6.5 Optimization & recommendation
 - **FR-40 (M)** "חשב המלצה" runs the compliance engine for all aircraft, then the optimizer, and returns:

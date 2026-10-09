@@ -68,8 +68,8 @@ This document is the human contract; if code and doc disagree, fix one of them i
 | Method | Path | Role | Response |
 |--------|------|------|----------|
 | GET | `/fleet/summary` | VIEWER | KPIs (below) |
-| GET | `/fleet/alerts?status=EXPIRED,EXPIRING_SOON,UNKNOWN&limit=100` | VIEWER | flat list of non-OK items across fleet, sorted by severity then due; with `EXPIRED`, also future assigned missions whose tail is no longer eligible (`source = ASSIGNMENT`, `ref` = mission name, `due_at` = mission start) |
-| GET | `/fleet/timeline?days=30` | VIEWER | predicted due items (uses utilization forecast; `predicted=true` flag) |
+| GET | `/fleet/alerts?status=EXPIRED,EXPIRING_SOON,UNKNOWN&limit=100` | VIEWER | flat list of non-OK items across fleet, sorted by severity then due; optional `units=` filter (unit-less safety alerts always kept); with `EXPIRED`, also future assigned missions whose tail is no longer eligible (`source = ASSIGNMENT`, `ref` = mission name, `due_at` = mission start) |
+| GET | `/fleet/timeline?days=30&units=FH,CAL_DAY&until=2026-11-30` | VIEWER | predicted due items (utilization forecast; `predicted=true` flag). FR-14: `units` (comma list of FH, LDG, TG, CYC, ENG_START, CAL_DAY; empty = all) and `until` (Israel calendar day, inclusive; overrides `days`); unknown unit ⇒ 422 |
 | GET | `/fleet/data-freshness` | VIEWER | `[{source_name, loaded_at, is_stale}]` |
 
 `/fleet/summary`:
@@ -91,7 +91,7 @@ This document is the human contract; if code and doc disagree, fix one of them i
 ### 3.4 Aircraft
 | Method | Path | Role | Notes |
 |--------|------|------|-------|
-| GET | `/aircraft` | VIEWER | filters: `type_code, base_code, status, compliance_status, qualification_code, q` (tail search), `sort=tail_number|compliance_status|next_due`; paginated `AircraftSummary` |
+| GET | `/aircraft` | VIEWER | filters: `type_code, base_code, status, compliance_status, qualification_code, q` (tail search), FR-14 `expiry=FH:0:50,CAL_DAY:0:7` (per unit "תוך:ועד" of what remains now; aircraft with expired/unknown items in those units, stale data or unreadable rows always match; malformed/duplicate unit ⇒ 422); `sort=tail_number|compliance_status|next_due`; paginated `AircraftSummary` |
 | GET | `/aircraft/{tail_number}` | VIEWER | `AircraftDetail` |
 | GET | `/aircraft/{tail_number}/flights?from=&to=` | VIEWER | paginated flight log |
 | GET | `/aircraft/{tail_number}/risk` | VIEWER | `{probability, band, model_version, top_factors:[{feature_code, direction}]}` or `{band:"UNAVAILABLE"}` |
@@ -174,9 +174,16 @@ Item `status` ∈ `EXPIRED | EXPIRING_SOON | OK | UNKNOWN`. `revoked_by` = `{kin
   "notes": null,
   "force_include": [],
   "force_exclude": [],
-  "overrides": { "duration_buffer_pct": null, "calendar_buffer_hours": null, "landing_buffer": null, "weights_preset": null }
+  "overrides": { "duration_buffer_pct": null, "calendar_buffer_hours": null, "landing_buffer": null, "weights_preset": null },
+  "expiry_windows": [ { "unit": "FH", "within": 10, "until": 50 },
+                      { "unit": "CAL_DAY", "within": 0, "until": 7 } ]
 }
 ```
+`expiry_windows` (FR-34, ranking only — OPT §3.4): ≤ 6, one per unit (`DUPLICATE_UNIT`); a band "תוך … ועד …" with
+both bounds in that unit (days for CAL_DAY): `within` ≥ 0 (default 0) < `until` (required; else `WINDOW_RANGE`).
+Returned on `MissionOut`; stored in `mission.overrides_json` (unreadable stored entries are skipped).
+`overrides` accepts only `duration_buffer_pct` (applied as max(policy, value) — a mission can never loosen a buffer)
+and `weights_preset`; calendar/landing buffers are admin policy only (stored legacy values are ignored).
 Validation: `required_aircraft_count` 1–20 · `est_duration_hours` 0.1–24 · `est_landings` 1–50 ·
 `est_touch_and_goes` 0–100 · `est_engine_starts` 1–20 · `start_at` ≥ now − 5 min · `name` 1–120 chars ·
 codes must exist in reference data · a tail cannot be both forced in and out.
@@ -294,6 +301,7 @@ DESIGN_SYSTEM.md §8). A contract test fails if the two sets differ.
 | `IDLE_CHECK_REQUIRED` | `idle_days`, `limit_days` |
 | `ML_MODEL_UNAVAILABLE` | `model_name` |
 | `NON_GROUNDING_PERMIT_INVALID` | `permit_type_code`, `outcome` (`EXPIRED`/`DUE_BEFORE_END`) |
+| `EXPIRES_WITHIN_WINDOW` | `source`, `ref`, `unit`, `margin`, `within`, `until` (FR-34 band, same unit) |
 
 ### 5.3 Unblock hints
 `UNBLOCK_MAX_DURATION {max_hours}` · `UNBLOCK_MAX_LANDINGS {max_landings_plus_tg}` · `UNBLOCK_LATEST_END {latest_end}` ·

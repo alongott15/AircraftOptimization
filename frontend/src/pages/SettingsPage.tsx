@@ -76,7 +76,7 @@ function PolicyCard({ editable }: { editable: boolean }) {
   );
 }
 
-const TERMS = ['risk', 'best_fit', 'balance', 'capacity', 'base_match', 'warnings'] as const;
+const TERMS = ['risk', 'best_fit', 'balance', 'capacity', 'base_match', 'warnings', 'expiry_window'] as const;
 const PRESETS = ['BALANCED', 'MAX_SAFETY', 'MAX_AVAILABILITY'] as const;
 
 /** FR-45 — scoring weights per preset (ranking of eligible aircraft only). */

@@ -238,6 +238,23 @@ class Aircraft:
         return any(m.severity == Severity.GROUNDING for m in self.open_mas)
 
 
+# Units a planner can set an expiration-window preference for (idle days reset when the aircraft flies).
+WINDOW_UNITS = (Unit.FH, Unit.LDG, Unit.TG, Unit.CYC, Unit.ENG_START, Unit.CAL_DAY)
+
+
+@dataclass(frozen=True, slots=True)
+class ExpiryWindow:
+    """Planner "avoid band" (תוך … ועד …) — ranking only, never eligibility (BR-14).
+
+    Both bounds are in `unit` (days for CAL_DAY) and count what remains *after* the mission: an aircraft with an item
+    in that unit expiring in [within, until] is ranked lower and warned; outside the band there is no penalty.
+    """
+
+    unit: Unit
+    within: float
+    until: float
+
+
 @dataclass(frozen=True, slots=True)
 class MissionRequest:
     name: str
@@ -255,6 +272,7 @@ class MissionRequest:
     force_include: frozenset[str] = frozenset()
     force_exclude: frozenset[str] = frozenset()
     mission_id: int | None = None
+    expiry_windows: tuple[ExpiryWindow, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

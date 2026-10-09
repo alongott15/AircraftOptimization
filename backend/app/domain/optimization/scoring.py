@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from app.domain.compliance.evaluator import EligibilityResult
 from app.domain.models import Unit
 from app.domain.numeric import r2
+from app.domain.optimization.expiry_window import NO_WINDOWS, WindowResult
 from app.domain.policy import SCORE_TERMS, PlanningPolicy
 from app.domain.reason_codes import Reason, WarningCode
 
@@ -32,6 +33,7 @@ class ScoringInputs:
     week_after: str | None = None
     hangar_load_after: int = 0
     hangar_cap_after: int = 0
+    windows: WindowResult = NO_WINDOWS  # planner expiration windows (OPT §3.4)
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,12 +101,17 @@ def score_candidate(
         "balance": balance(inputs),
         "capacity": capacity(inputs),
         "base_match": 1.0 if inputs.base_code == departure_base_code else 0.0,
-        "warnings": 1.0 - min(1.0, 0.25 * len(warnings)),
+        "warnings": 1.0 - min(1.0, 0.25 * len(warnings)),  # window hits have their own term — not counted twice
+        "expiry_window": inputs.windows.value,
     }
-    weights = policy.weights
-    total_weight = sum(weights[t] for t in SCORE_TERMS) or 1.0
+    warnings.extend(inputs.windows.warnings)
+    weights = dict(policy.weights)
+    if inputs.windows.total == 0:
+        weights["expiry_window"] = 0.0  # inactive term: renormalization keeps the other terms' scores unchanged
+    total_weight = sum(weights.get(t, 0.0) for t in SCORE_TERMS) or 1.0
     breakdown = {
-        t: TermScore(values[t], weights[t], 100.0 * weights[t] * values[t] / total_weight) for t in SCORE_TERMS
+        t: TermScore(values[t], weights.get(t, 0.0), 100.0 * weights.get(t, 0.0) * values[t] / total_weight)
+        for t in SCORE_TERMS
     }
     score = sum(b.contribution for b in breakdown.values())
     return ScoredCandidate(result, inputs, r2(score), breakdown, tuple(warnings))

@@ -1,14 +1,50 @@
-import { Button, Card, Group, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
-import { IconCube, IconFilterOff, IconSearch } from '@tabler/icons-react';
+import { Badge, Button, Card, Group, Popover, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { useState } from 'react';
+import { IconCube, IconFilterOff, IconHourglass, IconSearch } from '@tabler/icons-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAircraftList, useReference } from '../api/hooks';
 import { ErrorState, LoadingState, Ltr } from '../components/common';
+import { bandError, decodeBands, encodeBands, ExpiryBandsEditor, type BandRow } from '../components/ExpiryBands';
 import { useNames, useRemainingText } from '../components/results';
 import { OpStatusBadge, RiskBadge, StatusBadge } from '../components/StatusBadge';
 import { t, tk } from '../i18n';
 
-const FILTER_KEYS = ['type_code', 'base_code', 'status', 'compliance_status', 'qualification_code', 'q'] as const;
+const FILTER_KEYS = [
+  'type_code', 'base_code', 'status', 'compliance_status', 'qualification_code', 'q',
+  'expiry',  // FR-14: per-unit "תוך … ועד …" bands, e.g. FH:0:50,CAL_DAY:0:7
+] as const;
+
+/** FR-14: filter by "תוך … ועד …" expiration bands per activity unit (what remains now; days for calendar). */
+function ExpiryFilterButton({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  const [opened, setOpened] = useState(false);
+  const [rows, setRows] = useState<BandRow[]>([]);
+  const active = decodeBands(value);
+  const error = bandError(rows);
+  return (
+    <Popover opened={opened} onChange={setOpened} position="bottom-end" width={620} trapFocus shadow="md">
+      <Popover.Target>
+        <Button variant={active.length ? 'filled' : 'default'} leftSection={<IconHourglass size={16} />}
+          rightSection={active.length ? <Badge size="xs" color="white" c="dark">{active.length}</Badge> : undefined}
+          onClick={() => { setRows(active.length ? active : [{ unit: 'CAL_DAY', within: 0, until: 30 }]); setOpened((o) => !o); }}
+          data-testid="filter-expiry">
+          {t('expiry.filterButton')}
+        </Button>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <Text size="sm" c="dimmed" mb="xs">{t('expiry.filterHint')}</Text>
+        <ExpiryBandsEditor rows={rows} onChange={setRows} error={rows.length ? error : null} testId="filter-expiry-bands" />
+        <Group mt="sm" justify="flex-end">
+          <Button variant="subtle" onClick={() => { onChange(null); setOpened(false); }}>{t('action.clearFilters')}</Button>
+          <Button disabled={!rows.length || Boolean(error)} data-testid="filter-expiry-apply"
+            onClick={() => { onChange(encodeBands(rows)); setOpened(false); }}>
+            {t('expiry.filterApply')}
+          </Button>
+        </Group>
+      </Popover.Dropdown>
+    </Popover>
+  );
+}
 
 export function FleetPage() {
   const [params, setParams] = useSearchParams();
@@ -59,6 +95,7 @@ export function FleetPage() {
           <Select label={t('field.qualifications')} clearable w={170} value={params.get('qualification_code')}
             data={(ref?.qualifications ?? []).map((x) => ({ value: String(x.qualification_code), label: String(x.name_he) }))}
             onChange={(v) => setFilter('qualification_code', v)} />
+          <ExpiryFilterButton value={params.get('expiry')} onChange={(v) => setFilter('expiry', v)} />
           <Button variant="subtle" leftSection={<IconFilterOff size={16} />} onClick={() => setParams({})}>
             {t('action.clearFilters')}
           </Button>

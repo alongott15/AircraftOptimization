@@ -34,6 +34,7 @@ import {
 } from '../api/hooks';
 import type { Mission, MissionInput } from '../api/types';
 import { Disclaimer, ErrorState, LoadingState, errorMessage, useServerNow } from '../components/common';
+import { bandError, ExpiryBandsEditor, type BandRow } from '../components/ExpiryBands';
 import { defaultStartLocal, formatHours, localInputToUtc, parseDuration, utcToLocalInput } from '../i18n/format';
 import { t, tk } from '../i18n';
 
@@ -55,10 +56,9 @@ interface FormState {
   est_touch_and_goes: number;
   est_engine_starts: number;
   departure_base_code: string | null;
-  duration_buffer_pct: number | '';
-  calendar_buffer_hours: number | '';
-  landing_buffer: number | '';
+  duration_buffer_pct: number | '';  // only set from the ML suggestion (FR-52); no manual buffer fields
   weights_preset: string | null;
+  expiry_windows: BandRow[];
   force_include: string[];
   force_exclude: string[];
 }
@@ -73,9 +73,9 @@ function fromMission(m: Mission): FormState {
     start_local: utcToLocalInput(m.start_at), duration: formatHours(m.est_duration_hours), est_landings: m.est_landings,
     est_touch_and_goes: m.est_touch_and_goes, est_engine_starts: m.est_engine_starts,
     departure_base_code: m.departure_base_code, duration_buffer_pct: num(o.duration_buffer_pct),
-    calendar_buffer_hours: num(o.calendar_buffer_hours), landing_buffer: num(o.landing_buffer),
     weights_preset: typeof o.weights_preset === 'string' ? o.weights_preset : null,
     force_include: m.force_include, force_exclude: m.force_exclude,
+    expiry_windows: (m.expiry_windows ?? []).map((w) => ({ unit: w.unit, within: w.within, until: w.until })),
   };
 }
 
@@ -105,8 +105,8 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
     name: '', mission_type: 'TRAINING', priority: '3', notes: '', required_aircraft_count: 1,
     required_qualifications: [], engine_requirement: 'ANY', same_type_required: false,
     start_local: defaultStartLocal(now), duration: '2:00', est_landings: 1, est_touch_and_goes: 0, est_engine_starts: 1,
-    departure_base_code: null, duration_buffer_pct: '', calendar_buffer_hours: '', landing_buffer: '',
-    weights_preset: null, force_include: [], force_exclude: [],
+    departure_base_code: null, duration_buffer_pct: '',
+    weights_preset: null, force_include: [], force_exclude: [], expiry_windows: [],
   }));
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setF((cur) => ({ ...cur, [key]: value }));
   const ref = reference.data;
@@ -128,6 +128,8 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
     if (durationHours === null) local.est_duration_hours = t('val.DURATION_FORMAT');
     if (!f.departure_base_code) local.departure_base_code = t('val.FIELD_REQUIRED');
     if (!f.start_local) local.start_at = t('val.FIELD_REQUIRED');
+    const bands = bandError(f.expiry_windows);
+    if (bands) local.expiry_windows = bands;
     if (Object.keys(local).length) {
       setErrors(local);
       return;
@@ -139,10 +141,14 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
       start_at: localInputToUtc(f.start_local), est_duration_hours: durationHours ?? 0, est_landings: f.est_landings,
       est_touch_and_goes: f.est_touch_and_goes, est_engine_starts: f.est_engine_starts,
       departure_base_code: f.departure_base_code ?? '', force_include: f.force_include, force_exclude: f.force_exclude,
+      expiry_windows: f.expiry_windows.map((w) => ({
+        unit: w.unit as NonNullable<MissionInput['expiry_windows']>[number]['unit'],
+        within: Number(w.within || 0),
+        until: Number(w.until),
+      })),
       overrides: {
+        // calendar/landing buffers are admin policy only (FR-34 replaced them); the FH buffer can only be raised
         duration_buffer_pct: f.duration_buffer_pct === '' ? null : f.duration_buffer_pct,
-        calendar_buffer_hours: f.calendar_buffer_hours === '' ? null : f.calendar_buffer_hours,
-        landing_buffer: f.landing_buffer === '' ? null : f.landing_buffer,
         weights_preset: (f.weights_preset ?? null) as NonNullable<MissionInput['overrides']>['weights_preset'],
       },
     };
@@ -257,10 +263,17 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
               {suggestion.data && (
                 <Alert mt="sm" variant="light" color="blue" icon={<IconBulb />}>
                   <Group justify="space-between">
-                    <Text size="sm">{t('mission.suggestedBuffer', { pct: suggestion.data.suggested_buffer_pct })}</Text>
-                    <Button size="xs" variant="light" onClick={() => set('duration_buffer_pct', suggestion.data.suggested_buffer_pct)}>
-                      {t('action.apply')}
-                    </Button>
+                    <Text size="sm">
+                      {t('mission.suggestedBuffer', { pct: suggestion.data.suggested_buffer_pct })}
+                      {f.duration_buffer_pct !== '' && ` — ${t('mission.bufferApplied', { pct: f.duration_buffer_pct })}`}
+                    </Text>
+                    {f.duration_buffer_pct === '' ? (
+                      <Button size="xs" variant="light" onClick={() => set('duration_buffer_pct', suggestion.data.suggested_buffer_pct)}>
+                        {t('action.apply')}
+                      </Button>
+                    ) : (
+                      <Button size="xs" variant="subtle" onClick={() => set('duration_buffer_pct', '')}>{t('action.cancel')}</Button>
+                    )}
                   </Group>
                 </Alert>
               )}
@@ -268,22 +281,18 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
           </Grid.Col>
           <Grid.Col span={12}>
             <Card>
+              <Title order={5} mb={4}>{t('expiry.title')}</Title>
+              <Text size="sm" c="dimmed" mb="sm">{t('expiry.hint')}</Text>
+              <ExpiryBandsEditor rows={f.expiry_windows} onChange={(rows) => set('expiry_windows', rows)} testId="expiry"
+                error={Object.entries(errors).find(([k]) => k.startsWith('expiry_windows'))?.[1]} />
+            </Card>
+          </Grid.Col>
+          <Grid.Col span={12}>
+            <Card>
               <Button variant="subtle" leftSection={<IconAdjustments size={16} />} onClick={toggle}>{t('action.advanced')}</Button>
               <Collapse in={advanced}>
                 <Grid mt="sm">
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
-                    <NumberInput label={t('field.durationBuffer')} min={0} max={100} value={f.duration_buffer_pct}
-                      onChange={(v) => set('duration_buffer_pct', v === '' ? '' : Number(v))} />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
-                    <NumberInput label={t('field.calendarBuffer')} min={0} max={72} value={f.calendar_buffer_hours}
-                      onChange={(v) => set('calendar_buffer_hours', v === '' ? '' : Number(v))} />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
-                    <NumberInput label={t('field.landingBuffer')} min={0} max={10} value={f.landing_buffer} allowDecimal={false}
-                      onChange={(v) => set('landing_buffer', v === '' ? '' : Number(v))} />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
+                  <Grid.Col span={{ base: 12, sm: 4 }}>
                     <Select label={t('field.weightsPreset')} clearable value={f.weights_preset}
                       data={['BALANCED', 'MAX_SAFETY', 'MAX_AVAILABILITY'].map((v) => ({ value: v, label: tk(`preset.${v}`) }))}
                       onChange={(v) => set('weights_preset', v)} />

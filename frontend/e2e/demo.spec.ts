@@ -183,3 +183,33 @@ test('timeline range and admin settings: weights, tolerance policy, touch-and-go
   const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(serious.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`))).toEqual([]);
 });
+
+test('expiration bands "תוך … ועד …" per activity unit: ranking warning and fleet filter (FR-14/34)', async ({ page }) => {
+  await login(page, 'planner');
+  await page.goto('/missions/new');
+  await expect(page.getByLabel('מרווח זמן טיסה (%)')).toHaveCount(0);  // buffers were replaced by the bands
+  await page.getByTestId('mission-name').fill('טווח תפוגה');
+  await page.getByText('חד-מנועי', { exact: true }).click();
+  await page.getByTestId('mission-start').fill('2026-01-15T12:00');
+  await page.getByTestId('mission-duration').fill('1');
+  await page.getByTestId('mission-base').click();
+  await page.getByRole('option', { name: 'בסיס צפון' }).click();
+  await page.getByTestId('expiry-add').click();  // first free unit: flight hours
+  await page.getByTestId('expiry-until-FH').fill('100000');
+  await page.getByTestId('expiry-add').click();  // second unit: landings — same unit for תוך and ועד
+  await page.getByTestId('expiry-within-LDG').fill('0');
+  await page.getByTestId('expiry-until-LDG').fill('100000');
+  await page.getByTestId('optimize-btn').click();
+  await expect(page.getByTestId('mission-status')).toBeVisible();
+  await expect(page.getByText('יפוג בטווח "תוך 0 ועד').first()).toBeVisible();
+  await expect(page.getByText('חלון תפוגה מועדף').first()).toBeVisible();  // score term in the breakdown
+  expect(await latinOutsideBdi(page)).toEqual([]);
+
+  await page.goto('/fleet');
+  await page.getByTestId('filter-expiry').click();  // default band: calendar days 0–30
+  await page.getByTestId('filter-expiry-bands-until-CAL_DAY').fill('7');
+  await page.getByTestId('filter-expiry-apply').click();
+  await expect(page).toHaveURL(/expiry=CAL_DAY%3A0%3A7/);
+  await expect(page.getByTestId('fleet-table')).toContainText('4X-P06');  // SC-16: annual due in 3 days
+  await expect(page.getByTestId('fleet-table')).not.toContainText('4X-J01');
+});

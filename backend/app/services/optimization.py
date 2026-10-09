@@ -12,10 +12,11 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db import orm
-from app.domain.compliance.consumption import mission_window
+from app.domain.compliance.consumption import mission_end, mission_window
 from app.domain.compliance.evaluator import EligibilityResult, LimitProjection, evaluate_eligibility
 from app.domain.models import Aircraft, MissionRequest, OperationalStatus
 from app.domain.optimization.cpsat_selector import ForcedTailConflictError, SelectionCandidate, select
+from app.domain.optimization.expiry_window import NO_WINDOWS, evaluate_windows
 from app.domain.optimization.scoring import ScoredCandidate, ScoringInputs, score_candidate
 from app.domain.policy import PlanningPolicy
 from app.domain.reason_codes import Reason, WarningCode
@@ -25,7 +26,7 @@ from app.repositories import store
 from app.services.container import Container
 from app.services.context import FleetContext, load_context
 from app.services.errors import ServiceError
-from app.services.fleet import predicted_due
+from app.services.fleet import MAX_FORECAST_DAYS, predicted_due
 from app.services.missions import overrides_of, to_domain
 
 RUN_MAX_AGE = timedelta(minutes=30)
@@ -50,7 +51,11 @@ def _projections(ps: tuple[LimitProjection, ...]) -> list[dict[str, object]]:
 
 
 def effective_policy(base: PlanningPolicy, overrides: dict[str, Any], preset: str | None) -> PlanningPolicy:
-    policy = base.with_overrides(overrides)
+    """Admin policy + a mission's allowed choices. A mission can never loosen a safety buffer (BR-02/04)."""
+    allowed = {k: v for k, v in overrides.items() if k in ("weights_preset", "duration_buffer_pct")}
+    if allowed.get("duration_buffer_pct") is not None:
+        allowed["duration_buffer_pct"] = max(float(allowed["duration_buffer_pct"]), base.duration_buffer_pct)
+    policy = base.with_overrides(allowed)
     if preset:
         policy = policy.with_overrides({"weights_preset": preset})
     return policy
@@ -75,7 +80,7 @@ def _next_inspection_from_projections(r: EligibilityResult, now: datetime, rates
             after.append(due)
         elif p.remaining_now is not None:
             rate = rates.get(p.unit, 0.0)
-            if rate > 1e-6:
+            if rate > 1e-6 and abs(p.remaining_now / rate) <= MAX_FORECAST_DAYS:
                 before.append(now + timedelta(days=p.remaining_now / rate))
                 after.append(now + timedelta(days=max(p.remaining_now - (p.consumption or 0.0), 0.0) / rate))
     return (min(before) if before else None, min(after) if after else None)
@@ -134,7 +139,10 @@ def score_eligible(fc: FleetContext, eligible: list[EligibilityResult], mission:
         wb, wa = _week_or_none(before, fc.now), _week_or_none(after, fc.now)
         mean, sd = util.type_fh30.get(ac.aircraft_type.type_code, (0.0, 0.0))
         load_after = base_load.get((ac.base_code, wa), 0) - (1 if wa and wa == wb else 0) if wa else 0
+        windows = evaluate_windows(r, mission.expiry_windows, mission_end(mission.start_at, mission.duration_hours)
+                                   ) if mission.expiry_windows else NO_WINDOWS
         inputs = ScoringInputs(
+            windows=windows,
             type_code=ac.aircraft_type.type_code, base_code=ac.base_code,
             p_defect=(risks[ac.aircraft_id].probability if risks and ac.aircraft_id in risks else None),
             fh_last_30d=util.fh_last_30d.get(ac.aircraft_id, 0.0), type_mean_fh30=mean, type_sd_fh30=sd,

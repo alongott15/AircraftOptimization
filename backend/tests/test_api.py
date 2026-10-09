@@ -72,7 +72,8 @@ BODIES = {"/api/v1/missions": M_A, "/api/v1/eligibility/check": {"mission": M_A}
           "/api/v1/missions/1": {"notes": "x"}, "/api/v1/planning/horizon": {},
           "/api/v1/planning/horizon/apply": {"assignments": []},
           "/api/v1/settings/weights": {"presets": {"BALANCED": {"risk": 0.3, "best_fit": 0.25, "balance": 0.15,
-                                                                "capacity": 0.15, "base_match": 0.1, "warnings": 0.05}}},
+                                                                "capacity": 0.15, "base_match": 0.1, "warnings": 0.05,
+                                                                "expiry_window": 0.1}}},
           "/api/v1/settings/tg-weights": []}
 
 
@@ -295,7 +296,8 @@ def test_assigned_mission_that_lost_eligibility_is_alerted(client: TestClient) -
 
 
 # ── settings: scoring weights (FR-45), touch-and-go weights (FR-60) ─────
-BALANCED = {"risk": 3, "best_fit": 2.5, "balance": 1.5, "capacity": 1.5, "base_match": 1, "warnings": 0.5}
+BALANCED = {"risk": 3, "best_fit": 2.5, "balance": 1.5, "capacity": 1.5, "base_match": 1, "warnings": 0.5,
+            "expiry_window": 0}
 
 
 def test_admin_edits_preset_weights_normalized_and_audited(client: TestClient) -> None:
@@ -303,14 +305,15 @@ def test_admin_edits_preset_weights_normalized_and_audited(client: TestClient) -
     r = client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": BALANCED}}, headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["presets"]["BALANCED"] == pytest.approx(
-        {"risk": 0.3, "best_fit": 0.25, "balance": 0.15, "capacity": 0.15, "base_match": 0.1, "warnings": 0.05})
+        {"risk": 0.3, "best_fit": 0.25, "balance": 0.15, "capacity": 0.15, "base_match": 0.1, "warnings": 0.05,
+         "expiry_window": 0.0})
     bad = client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": {**BALANCED, "risk": -1}}},
                      headers=headers)
     assert bad.status_code == 422
     missing = client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": {"risk": 1}}}, headers=headers)
     assert missing.status_code == 422
     nan = client.put("/api/v1/settings/weights", content='{"presets": {"BALANCED": {"risk": NaN, "best_fit": 1, '
-                     '"balance": 1, "capacity": 1, "base_match": 1, "warnings": 1}}}',
+                     '"balance": 1, "capacity": 1, "base_match": 1, "warnings": 1, "expiry_window": 1}}}',
                      headers={**headers, "Content-Type": "application/json"})
     assert nan.status_code == 422
     actions = {a["action"] for a in client.get("/api/v1/audit", headers=headers).json()["items"]}
@@ -378,3 +381,140 @@ def test_created_mission_is_immediately_readable(client: TestClient) -> None:
     created = client.post("/api/v1/missions", json=M_A, headers=headers)
     assert created.status_code == 201
     assert client.get(f"/api/v1/missions/{created.json()['mission_id']}", headers=headers).status_code == 200
+
+
+
+# ── expiration "avoid bands" (ranking, FR-34) and fleet expiry filters (FR-14) ──
+def test_mission_bands_are_stored_validated_and_rank_only(client: TestClient) -> None:
+    headers = login(client, "planner")
+    bands = [{"unit": "FH", "within": 0, "until": 100000}, {"unit": "CAL_DAY", "within": 0, "until": 3650}]
+    plain = client.post("/api/v1/missions", json=M_A, headers=headers).json()
+    mission = client.post("/api/v1/missions", json={**M_A, "expiry_windows": bands}, headers=headers).json()
+    assert mission["expiry_windows"] == [{"unit": "FH", "within": 0, "until": 100000},
+                                         {"unit": "CAL_DAY", "within": 0, "until": 3650}]
+    assert "expiry_windows" not in mission["overrides"]
+    with_w = client.post(f"/api/v1/missions/{mission['mission_id']}/optimize", json={}, headers=headers).json()
+    without = client.post(f"/api/v1/missions/{plain['mission_id']}/optimize", json={}, headers=headers).json()
+    # BR-14: bands never change eligibility — only ranking and warnings
+    assert {c["tail_number"] for c in with_w["candidates"] if c["eligible"]} == \
+        {c["tail_number"] for c in without["candidates"] if c["eligible"]}
+    eligible = [c for c in with_w["candidates"] if c["eligible"]]
+    assert all(c["score_breakdown"]["expiry_window"]["weight"] > 0 for c in eligible)
+    assert all(c["score_breakdown"]["expiry_window"]["value"] == 0 for c in eligible)  # every band is hit
+    assert all("EXPIRES_WITHIN_WINDOW" in {w["code"] for w in c["warnings"]} for c in eligible)
+    assert all(c["score_breakdown"]["expiry_window"]["weight"] == 0
+               for c in without["candidates"] if c["eligible"])
+
+
+@pytest.mark.parametrize(("windows", "code"), [
+    ([{"unit": "FH", "until": 5}, {"unit": "FH", "until": 9}], "DUPLICATE_UNIT"),
+    ([{"unit": "LDG", "within": 10, "until": 5}], "WINDOW_RANGE"),
+    ([{"unit": "LDG", "within": 3}], None),  # ועד is required
+    ([{"unit": "IDLE_DAY", "until": 3}], None),
+])
+def test_band_validation(client: TestClient, windows: list[dict[str, object]], code: str | None) -> None:
+    headers = login(client, "planner")
+    r = client.post("/api/v1/missions", json={**M_A, "expiry_windows": windows}, headers=headers)
+    assert r.status_code == 422
+    if code:
+        assert code in {e["code"] for e in r.json()["errors"]}
+
+
+def test_unreadable_stored_band_never_breaks_safety_paths(client: TestClient) -> None:
+    headers = login(client, "planner")
+    mid = client.post("/api/v1/missions", json={**M_A, "expiry_windows": [{"unit": "FH", "until": 5}]},
+                      headers=headers).json()["mission_id"]
+    c = client.app.state.container  # type: ignore[attr-defined]
+    huge = "1" + "0" * 400  # float() overflows
+    with c.sf() as s:
+        s.execute(text("UPDATE mission SET overrides_json = :j, status = 'ASSIGNED' WHERE mission_id = :m"),
+                  {"j": '{"expiry_windows": [{"unit": "NOPE", "until": "x"}, 7, {"unit": "FH", "within": 0, '
+                        f'"until": {huge}}}]}}', "m": mid})
+        s.execute(text(  # an ACTIVE assignment so the at-risk re-check really parses this mission
+            "INSERT INTO mission_assignment (mission_id, aircraft_id, window_start, window_end, status, assigned_by, "
+            "assigned_at) VALUES (:m, 1, '2026-01-15T10:00:00Z', '2026-01-15T14:00:00Z', 'ACTIVE', 1, "
+            "'2026-01-15T08:00:00Z')"), {"m": mid})
+        s.commit()
+    assert client.get(f"/api/v1/missions/{mid}", headers=headers).json()["expiry_windows"] == []
+    assert client.get("/api/v1/fleet/alerts", headers=headers).status_code == 200
+
+
+def test_fleet_views_filter_by_units_and_bands(client: TestClient) -> None:
+    headers = login(client, "maint")
+    cal = client.get("/api/v1/fleet/timeline", params={"days": 365, "units": "CAL_DAY"}, headers=headers).json()
+    assert cal and {x["unit"] for x in cal} == {"CAL_DAY"}
+    both = client.get("/api/v1/fleet/timeline", params={"days": 365, "units": "CAL_DAY,FH"}, headers=headers).json()
+    assert {x["unit"] for x in both} <= {"CAL_DAY", "FH"} and len(both) >= len(cal)
+    until = client.get("/api/v1/fleet/timeline", params={"until": "2026-01-20", "units": "CAL_DAY"},
+                       headers=headers).json()
+    assert all(x["date"] < "2026-01-21" for x in until) and len(until) <= len(cal)
+    everyone = client.get("/api/v1/aircraft", params={"page_size": 200}, headers=headers).json()["total"]
+    soon = client.get("/api/v1/aircraft", params={"page_size": 200, "expiry": "CAL_DAY:0:7"}, headers=headers).json()
+    assert 0 < soon["total"] < everyone
+    tails = {a["tail_number"] for a in soon["items"]}
+    assert {"4X-P06", "4X-S03", "4X-P05"} <= tails  # due in 3 days; overdue items count as 0 remaining
+    assert "4X-P04" in {a["tail_number"] for a in client.get(  # SC-11: unknown LDG counter is never hidden
+        "/api/v1/aircraft", params={"page_size": 200, "expiry": "LDG:0:1"}, headers=headers).json()["items"]}
+    for bad in ("IDLE_DAY:0:5", "FH:5:1", "FH", "FH:0:5,FH:1:9"):
+        assert client.get("/api/v1/aircraft", params={"expiry": bad}, headers=headers).status_code == 422
+    assert client.get("/api/v1/fleet/timeline", params={"units": "IDLE_DAY"}, headers=headers).status_code == 422
+    # safety alerts without a unit (grounding MA, data issues, at-risk assignments) survive a unit filter
+    alerts = client.get("/api/v1/fleet/alerts", params={"units": "CAL_DAY"}, headers=headers).json()
+    assert any(a["source"] == "MAINTENANCE_ACTION" for a in alerts)
+
+
+def test_timeline_never_hides_overdue_usage_items_without_forecast() -> None:
+    from datetime import UTC, datetime
+
+    from app.domain.compliance.status import ItemStatus
+    from app.domain.models import ComplianceStatus
+    from app.services.fleet import ExpiryFilter
+
+    now = datetime(2026, 1, 15, 8, tzinfo=UTC)
+    overdue = ItemStatus(source="INSPECTION", ref="I100H", unit="FH", kind="COUNTER", status=ComplianceStatus.EXPIRED,
+                         remaining=-3.0, due_value=100.0, due_at=None, interval=100.0, zone_code=None, blocking=True)
+    from tests.builders import an_aircraft
+
+    window = ExpiryFilter(frozenset({"FH"}), now, rates={})
+    assert window.item_date(an_aircraft().build(), overdue, now) == now
+
+
+def test_missions_can_never_loosen_admin_buffers(client: TestClient) -> None:
+    headers = login(client, "planner")
+    r = client.post("/api/v1/missions", json={**M_A, "overrides": {"calendar_buffer_hours": 0}}, headers=headers)
+    assert r.status_code == 422  # calendar/landing buffers are admin policy only
+    plain = client.post("/api/v1/missions", json=M_A, headers=headers).json()["mission_id"]
+    legacy = client.post("/api/v1/missions", json=M_A, headers=headers).json()["mission_id"]
+    c = client.app.state.container  # type: ignore[attr-defined]
+    with c.sf() as s:  # an older mission row that still stores loosened buffers
+        s.execute(text("UPDATE mission SET overrides_json = :j WHERE mission_id = :m"), {
+            "j": '{"calendar_buffer_hours": 0, "landing_buffer": 0, "duration_buffer_pct": 0}', "m": legacy})
+        s.commit()
+
+    def eligible(mid: int) -> list[tuple[str, bool]]:
+        run = client.post(f"/api/v1/missions/{mid}/optimize", json={}, headers=headers).json()
+        return sorted((c["tail_number"], c["eligible"]) for c in run["candidates"])
+
+    assert eligible(legacy) == eligible(plain)
+    assert client.get(f"/api/v1/missions/{legacy}", headers=headers).json()["overrides"] == {"duration_buffer_pct": 0}
+
+
+def test_band_filter_never_hides_stale_unreadable_or_expired() -> None:
+    from dataclasses import replace as rep
+    from datetime import timedelta as td
+
+    from app.domain.compliance.status import aircraft_status
+    from app.domain.models import Unit
+    from app.domain.policy import PlanningPolicy
+    from app.services.fleet import BandFilter
+    from tests.builders import T0, an_aircraft, ctx
+
+    p, band = PlanningPolicy(), BandFilter((("FH", 0.0, 50.0),))
+    healthy = an_aircraft().remaining("I100H", Unit.FH, 60.0).build()
+    assert not band.matches(aircraft_status(healthy, p, ctx()))  # 60 FH left: outside 0–50
+    stale = an_aircraft().remaining("I100H", Unit.FH, 60.0).updated_at(T0 - td(days=5)).build()
+    assert band.matches(aircraft_status(stale, p, ctx()))
+    unreadable = rep(healthy, data_issues=(("MAINTENANCE_ACTION", "MA-9"),))
+    assert band.matches(aircraft_status(unreadable, p, ctx()))
+    expired = an_aircraft().remaining("I100H", Unit.FH, -3.0).build()
+    assert BandFilter((("FH", 10.0, 50.0),)).matches(aircraft_status(expired, p, ctx()))

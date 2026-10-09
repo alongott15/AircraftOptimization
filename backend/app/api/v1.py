@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import math
 import time
-from datetime import datetime
+from datetime import UTC, date, datetime, timedelta
+from datetime import time as clock_time
 from typing import Annotated, Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Query, Request, Response
 from fastapi.responses import RedirectResponse
@@ -60,9 +63,10 @@ from app.security.auth import (
 from app.security.oidc import STATE_COOKIE, STATE_TTL_S, OidcError
 from app.services import admin, fleet, horizon, missions, optimization
 from app.services.context import load_context
-from app.services.errors import ServiceError
+from app.services.errors import ServiceError, validation
 
 router = APIRouter(prefix="/api/v1")
+ISRAEL = ZoneInfo("Asia/Jerusalem")
 READY_TTL_S = 10.0
 
 
@@ -203,18 +207,57 @@ def fleet_summary(_: Viewer, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
 @router.get("/fleet/alerts", response_model=list[AlertOut], tags=["fleet"])
 def fleet_alerts(_: Viewer, c: ContainerDep, s: SessionDep,
                  status: str = "EXPIRED,EXPIRING_SOON,UNKNOWN",
-                 limit: Annotated[int, Query(ge=1, le=500)] = 100) -> list[dict[str, Any]]:
+                 limit: Annotated[int, Query(ge=1, le=500)] = 100, units: str | None = None) -> list[dict[str, Any]]:
     fc = load_context(c, s)
     wanted = [x.strip() for x in status.split(",") if x.strip()]
-    at_risk = optimization.assignments_at_risk(s, fc) if "EXPIRED" in wanted else []
-    return fleet.fleet_alerts(fc, wanted, limit, extra=at_risk)
+    at_risk = optimization.assignments_at_risk(s, fc) if "EXPIRED" in wanted else []  # never filtered by unit
+    return fleet.fleet_alerts(fc, wanted, limit, extra=at_risk, units=_units(units))
+
+
+FILTER_UNITS = frozenset({"FH", "LDG", "TG", "CYC", "ENG_START", "CAL_DAY"})
+
+
+def _units(raw: str | None) -> frozenset[str]:
+    """Comma-separated activity units for the fleet expiry filters (FR-14); unknown codes are a 422."""
+    units = frozenset(x.strip() for x in (raw or "").split(",") if x.strip())
+    if units - FILTER_UNITS:
+        raise validation("units", "INVALID_VALUE")
+    return units
+
+
+def _bands(raw: str) -> fleet.BandFilter:
+    """`expiry=FH:0:50,CAL_DAY:0:7` — per unit "תוך:ועד" in that unit (FR-14). Malformed ⇒ 422."""
+    bands: list[tuple[str, float, float]] = []
+    for part in (x.strip() for x in raw.split(",") if x.strip()):
+        try:
+            unit, low, high = part.split(":")
+            lo, hi = float(low), float(high)
+        except ValueError:
+            raise validation("expiry", "INVALID_VALUE") from None
+        if unit not in FILTER_UNITS or not (math.isfinite(lo) and math.isfinite(hi) and 0 <= lo < hi):
+            raise validation("expiry", "INVALID_VALUE")
+        if any(b[0] == unit for b in bands):
+            raise validation("expiry", "DUPLICATE_UNIT")
+        bands.append((unit, lo, hi))
+    return fleet.BandFilter(tuple(bands))
+
+
+def _end_of_day(day: date | None) -> datetime | None:
+    """`until` is a calendar day in Israel time; the window includes that whole day."""
+    if day is None:
+        return None
+    try:
+        return datetime.combine(day + timedelta(days=1), clock_time.min, tzinfo=ISRAEL).astimezone(UTC)
+    except OverflowError:
+        raise validation("until", "INVALID_VALUE") from None
 
 
 @router.get("/fleet/timeline", response_model=list[TimelineItemOut], tags=["fleet"])
 def fleet_timeline(_: Viewer, c: ContainerDep, s: SessionDep,
-                   days: Annotated[int, Query(ge=1, le=365)] = 30) -> list[dict[str, Any]]:
+                   days: Annotated[int, Query(ge=1, le=365)] = 30, units: str | None = None,
+                   until: date | None = None) -> list[dict[str, Any]]:
     fc = load_context(c, s)
-    return fleet.fleet_timeline(fc, days, c.ml.utilization(fc.aircraft, fc.now))
+    return fleet.fleet_timeline(fc, days, c.ml.utilization(fc.aircraft, fc.now), _units(units), _end_of_day(until))
 
 
 @router.get("/fleet/data-freshness", response_model=list[SourceFreshnessOut], tags=["fleet"])
@@ -228,12 +271,15 @@ def list_aircraft(_: Viewer, c: ContainerDep, s: SessionDep, type_code: str | No
                   base_code: str | None = None, status: str | None = None, compliance_status: str | None = None,
                   qualification_code: str | None = None, q: Annotated[str | None, Query(max_length=16)] = None,
                   sort: str = "compliance_status", page: Annotated[int, Query(ge=1)] = 1,
-                  page_size: Annotated[int, Query(ge=1, le=200)] = 50) -> dict[str, Any]:
+                  page_size: Annotated[int, Query(ge=1, le=200)] = 50,
+                  expiry: Annotated[str | None, Query(max_length=200)] = None) -> dict[str, Any]:
     fc = load_context(c, s)
     risks = c.ml.predict_risk(fc.aircraft, fc.now)
     statuses = [x.strip() for x in compliance_status.split(",")] if compliance_status else None
+    bands = _bands(expiry) if expiry else None  # FR-14: per-unit "תוך … ועד …" bands
     rows = fleet.list_aircraft(fc, risks, type_code=type_code, base_code=base_code, status=status,
-                               compliance_status=statuses, qualification_code=qualification_code, q=q, sort=sort)
+                               compliance_status=statuses, qualification_code=qualification_code, q=q, sort=sort,
+                               expiry=bands)
     return _page(rows, page, page_size)
 
 

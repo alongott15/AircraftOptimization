@@ -37,10 +37,28 @@ class LoginIn(In):
 
 
 class MissionOverridesIn(In):
+    """Per-mission planner choices. Calendar/landing buffers are admin policy only (FR-34 replaced them in the form);
+    `duration_buffer_pct` (from the ML suggestion, FR-52) can only make the FH buffer stricter than the policy."""
+
     duration_buffer_pct: float | None = Field(default=None, ge=0, le=100)
-    calendar_buffer_hours: float | None = Field(default=None, ge=0, le=72)
-    landing_buffer: int | None = Field(default=None, ge=0, le=10)
     weights_preset: PresetLit | None = None
+
+
+WindowUnitLit = Literal["FH", "LDG", "TG", "CYC", "ENG_START", "CAL_DAY"]
+
+
+class ExpiryWindowIn(In):
+    """"Avoid band" תוך … ועד … in one activity unit (days for CAL_DAY), counted after the mission. Ranking only."""
+
+    unit: WindowUnitLit
+    within: float = Field(default=0, ge=0, le=100_000, allow_inf_nan=False)
+    until: float = Field(gt=0, le=100_000, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def _range(self) -> ExpiryWindowIn:
+        if self.within >= self.until:
+            raise ValueError("WINDOW_RANGE")
+        return self
 
 
 class MissionIn(In):
@@ -61,6 +79,7 @@ class MissionIn(In):
     force_include: list[str] = Field(default_factory=list, max_length=20)
     force_exclude: list[str] = Field(default_factory=list, max_length=50)
     overrides: MissionOverridesIn = Field(default_factory=MissionOverridesIn)
+    expiry_windows: list[ExpiryWindowIn] = Field(default_factory=list, max_length=6)
 
     @field_validator("start_at")
     @classmethod
@@ -73,6 +92,9 @@ class MissionIn(In):
     def _forced(self) -> MissionIn:
         if set(self.force_include) & set(self.force_exclude):
             raise ValueError("TAIL_FORCED_BOTH_WAYS")
+        units = [w.unit for w in self.expiry_windows]
+        if len(units) != len(set(units)):
+            raise ValueError("DUPLICATE_UNIT")
         return self
 
 
@@ -124,7 +146,7 @@ class PolicyUpdateIn(In):
     weights_preset: PresetLit | None = None
 
 
-TermLit = Literal["risk", "best_fit", "balance", "capacity", "base_match", "warnings"]
+TermLit = Literal["risk", "best_fit", "balance", "capacity", "base_match", "warnings", "expiry_window"]
 
 
 Weight = Annotated[float, Field(ge=0, le=100, allow_inf_nan=False)]
@@ -380,6 +402,12 @@ class AssignmentOut(Out):
     set_index: int | None
 
 
+class ExpiryWindowOut(Out):
+    unit: str
+    within: float
+    until: float
+
+
 class MissionOut(Out):
     mission_id: int
     name: str
@@ -401,6 +429,7 @@ class MissionOut(Out):
     force_include: list[str]
     force_exclude: list[str]
     overrides: dict[str, Any]
+    expiry_windows: list[ExpiryWindowOut]
     created_by: int
     created_at: str | None
     updated_at: str | None

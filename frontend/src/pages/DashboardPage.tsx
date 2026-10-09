@@ -1,5 +1,6 @@
 import {
-  Anchor, Card, Grid, Group, Paper, Progress, ScrollArea, SegmentedControl, SimpleGrid, Stack, Table, Text, Title,
+  Anchor, Card, Grid, Group, MultiSelect, Paper, Progress, ScrollArea, SegmentedControl, SimpleGrid, Stack, Table, Text,
+  TextInput, Title,
 } from '@mantine/core';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,13 +10,18 @@ import { EmptyState, ErrorState, KpiCard, LoadingState, Ltr } from '../component
 import { useNames, useRemainingText } from '../components/results';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatDate, formatNumber } from '../i18n/format';
+import { ltr } from '../i18n/reasonCodes';
 import { t } from '../i18n';
+
+const UNIT_FILTER = ['FH', 'LDG', 'TG', 'CYC', 'ENG_START', 'CAL_DAY'];
 
 export function DashboardPage() {
   const summary = useFleetSummary();
   const alerts = useAlerts();
-  const [days, setDays] = useState('30');  // FR-13: 14 / 30 / 90 days
-  const timeline = useTimeline(Number(days));
+  const [days, setDays] = useState('30');  // FR-13: 14 / 30 / 90 days …
+  const [units, setUnits] = useState<string[]>([]);  // FR-14: … in the chosen activity units …
+  const [until, setUntil] = useState('');  // … or until a date
+  const timeline = useTimeline(Number(days), units, until);
   const fleet = useAircraftList({ page_size: 200 });
   const reference = useReference();
   const names = useNames();
@@ -25,6 +31,8 @@ export function DashboardPage() {
   if (summary.isPending) return <LoadingState />;
   if (summary.isError) return <ErrorState error={summary.error} onRetry={() => void summary.refetch()} />;
   const s = summary.data;
+  const unitLabel = (code: string) =>
+    reference.data?.activity_units.find((u) => u.unit_code === code)?.name_he?.toString() ?? code;
   const typeName = (code: string) =>
     reference.data?.aircraft_types.find((x) => x.type_code === code)?.name_he?.toString() ?? code;
 
@@ -74,10 +82,19 @@ export function DashboardPage() {
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Card h="100%">
-            <Group justify="space-between" mb="sm" wrap="nowrap">
-              <Title order={4}>{t('dashboard.timeline', { days })}</Title>
-              <SegmentedControl size="xs" value={days} onChange={setDays} aria-label={t('dashboard.timelineRange')}
-                data-testid="timeline-range" data={['14', '30', '90']} />
+            <Group justify="space-between" mb="xs" wrap="nowrap">
+              <Title order={4}>
+                {until ? t('expiry.timelineUntil', { date: ltr(formatDate(`${until}T12:00:00Z`)) }) : t('dashboard.timeline', { days })}
+              </Title>
+              <SegmentedControl size="xs" value={days} onChange={(v) => { setDays(v); setUntil(''); }}
+                aria-label={t('dashboard.timelineRange')} data-testid="timeline-range" data={['14', '30', '90']} />
+            </Group>
+            <Group gap="xs" mb="sm" wrap="wrap">
+              <MultiSelect size="xs" w={260} clearable placeholder={units.length ? undefined : t('expiry.allUnits')}
+                aria-label={t('expiry.filterUnits')} value={units} onChange={setUnits} data-testid="timeline-units"
+                data={UNIT_FILTER.map((u) => ({ value: u, label: unitLabel(u) }))} />
+              <TextInput size="xs" type="date" w={150} value={until} aria-label={t('expiry.filterUntil')}
+                onChange={(e) => setUntil(e.currentTarget.value)} data-testid="timeline-until" />
             </Group>
             {timeline.isPending ? <LoadingState /> : timeline.isError ? <ErrorState error={timeline.error} /> : (
               <ScrollArea h={360}>

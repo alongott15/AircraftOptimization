@@ -7,18 +7,26 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, replace
 from typing import Any
 
-SCORE_TERMS = ("risk", "best_fit", "balance", "capacity", "base_match", "warnings")
+SCORE_TERMS = ("risk", "best_fit", "balance", "capacity", "base_match", "warnings", "expiry_window")
+# The expiry-window term is active only for missions that define windows (OPT §3.4); otherwise its weight is set
+# to 0 and the remaining weights are renormalized, so scores are exactly what they were without the term.
+WINDOW_TERM_WEIGHT = 0.15
+
+
+def _with_window_term(base: Mapping[str, float]) -> dict[str, float]:
+    return {**{t: base[t] * (1 - WINDOW_TERM_WEIGHT) for t in base}, "expiry_window": WINDOW_TERM_WEIGHT}
+
 
 WEIGHT_PRESETS: Mapping[str, Mapping[str, float]] = {
-    "BALANCED": {
+    "BALANCED": _with_window_term({
         "risk": 0.30, "best_fit": 0.25, "balance": 0.15, "capacity": 0.15, "base_match": 0.10, "warnings": 0.05,
-    },
-    "MAX_SAFETY": {
+    }),
+    "MAX_SAFETY": _with_window_term({
         "risk": 0.55, "best_fit": 0.10, "balance": 0.10, "capacity": 0.10, "base_match": 0.05, "warnings": 0.10,
-    },
-    "MAX_AVAILABILITY": {
+    }),
+    "MAX_AVAILABILITY": _with_window_term({
         "risk": 0.15, "best_fit": 0.35, "balance": 0.20, "capacity": 0.20, "base_match": 0.05, "warnings": 0.05,
-    },
+    }),
 }
 
 
@@ -69,8 +77,9 @@ def normalize_weights(weights: Mapping[str, float]) -> dict[str, float]:
     if any(not math.isfinite(w) or w < 0 for w in weights.values()):
         raise ValueError("weights must be finite and not negative")
     total = sum(weights.values())
-    if total <= 0:
-        raise ValueError("at least one weight must be positive")
+    if total - weights.get("expiry_window", 0.0) <= 0:
+        # the window term is inactive for missions without windows; it can never be the only weight
+        raise ValueError("at least one weight other than expiry_window must be positive")
     return {term: round(weights[term] / total, 4) for term in SCORE_TERMS}
 
 

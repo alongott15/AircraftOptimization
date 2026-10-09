@@ -925,6 +925,33 @@ export interface components {
             /** Tail Numbers */
             tail_numbers?: string[] | null;
         };
+        /**
+         * ExpiryWindowIn
+         * @description "Avoid band" תוך … ועד … in one activity unit (days for CAL_DAY), counted after the mission. Ranking only.
+         */
+        ExpiryWindowIn: {
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "FH" | "LDG" | "TG" | "CYC" | "ENG_START" | "CAL_DAY";
+            /**
+             * Within
+             * @default 0
+             */
+            within: number;
+            /** Until */
+            until: number;
+        };
+        /** ExpiryWindowOut */
+        ExpiryWindowOut: {
+            /** Unit */
+            unit: string;
+            /** Within */
+            within: number;
+            /** Until */
+            until: number;
+        };
         /** FleetSummaryOut */
         FleetSummaryOut: {
             /** As Of */
@@ -1210,6 +1237,8 @@ export interface components {
             /** Force Exclude */
             force_exclude?: string[];
             overrides?: components["schemas"]["MissionOverridesIn"];
+            /** Expiry Windows */
+            expiry_windows?: components["schemas"]["ExpiryWindowIn"][];
         };
         /** MissionOut */
         MissionOut: {
@@ -1264,6 +1293,8 @@ export interface components {
             overrides: {
                 [key: string]: unknown;
             };
+            /** Expiry Windows */
+            expiry_windows: components["schemas"]["ExpiryWindowOut"][];
             /** Created By */
             created_by: number;
             /** Created At */
@@ -1275,14 +1306,14 @@ export interface components {
             /** Assignments */
             assignments: components["schemas"]["AssignmentOut"][];
         };
-        /** MissionOverridesIn */
+        /**
+         * MissionOverridesIn
+         * @description Per-mission planner choices. Calendar/landing buffers are admin policy only (FR-34 replaced them in the form);
+         *     `duration_buffer_pct` (from the ML suggestion, FR-52) can only make the FH buffer stricter than the policy.
+         */
         MissionOverridesIn: {
             /** Duration Buffer Pct */
             duration_buffer_pct?: number | null;
-            /** Calendar Buffer Hours */
-            calendar_buffer_hours?: number | null;
-            /** Landing Buffer */
-            landing_buffer?: number | null;
             /** Weights Preset */
             weights_preset?: ("BALANCED" | "MAX_SAFETY" | "MAX_AVAILABILITY") | null;
         };
@@ -1987,6 +2018,7 @@ export interface operations {
             query?: {
                 status?: string;
                 limit?: number;
+                units?: string | null;
             };
             header?: never;
             path?: never;
@@ -2018,6 +2050,8 @@ export interface operations {
         parameters: {
             query?: {
                 days?: number;
+                units?: string | null;
+                until?: string | null;
             };
             header?: never;
             path?: never;
@@ -2077,6 +2111,7 @@ export interface operations {
                 sort?: string;
                 page?: number;
                 page_size?: number;
+                expiry?: string | null;
             };
             header?: never;
             path?: never;

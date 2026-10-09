@@ -105,3 +105,15 @@ def test_horizon_rejects_ineligible_forced_tail(client: TestClient) -> None:
     assert r.status_code == 422 and r.json()["code"] == "FORCE_INCLUDE_INELIGIBLE"
     assert r.json()["params"] == {"tail_number": "4X-S03", "mission_id": a}
     assert "INSPECTION_EXPIRED" in {x["code"] for x in r.json()["reasons"][str(a)]["4X-S03"]}
+
+
+def test_bands_never_change_horizon_eligibility(client: TestClient) -> None:
+    headers = login(client, "planner")
+    bands = [{"unit": "FH", "until": 100000}, {"unit": "CAL_DAY", "until": 3650}]
+    a = client.post("/api/v1/missions", json={**MISSION, "name": "א", "start_at": "2026-01-15T10:00:00Z"},
+                    headers=headers).json()["mission_id"]
+    b = client.post("/api/v1/missions", json={**MISSION, "name": "ב", "start_at": "2026-01-15T10:00:00Z",
+                                               "expiry_windows": bands}, headers=headers).json()["mission_id"]
+    plan = client.post("/api/v1/planning/horizon", json={"mission_ids": [a, b]}, headers=headers).json()
+    counts = {m["mission_id"]: m["eligible_count"] for m in plan["missions"]}
+    assert counts[a] == counts[b]  # identical missions, one with bands: same eligibility

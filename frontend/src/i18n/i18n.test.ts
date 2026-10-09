@@ -19,7 +19,7 @@ const ALL_CODES = [
   'DEFERRAL_EXPIRED', 'DEFERRAL_EXPIRES_BEFORE_MISSION_END', 'QUALIFICATION_MISSING', 'QUALIFICATION_EXPIRED',
   'QUALIFICATION_EXPIRES_BEFORE_MISSION_END', 'QUALIFICATION_REVOKED_BY_MA', 'QUALIFICATION_REVOKED_BY_PERMIT',
   'PERMIT_RESTRICTION_CONFLICT', 'IDLE_LIMIT_EXCEEDED', 'DATA_MISSING', 'DATA_STALE', 'MANUALLY_EXCLUDED',
-  'JEOPARDIZES_LATER_ASSIGNMENT', 'NON_GROUNDING_PERMIT_INVALID',
+  'JEOPARDIZES_LATER_ASSIGNMENT', 'NON_GROUNDING_PERMIT_INVALID', 'EXPIRES_WITHIN_WINDOW',
   'LOW_MARGIN_AFTER_MISSION', 'EXPIRES_SOON_AFTER_MISSION', 'HIGH_DEFECT_RISK', 'TOLERANCE_AVAILABLE',
   'IDLE_CHECK_REQUIRED', 'ML_MODEL_UNAVAILABLE', 'UNBLOCK_MAX_DURATION', 'UNBLOCK_MAX_LANDINGS', 'UNBLOCK_LATEST_END',
   'UNBLOCK_PERFORM_INSPECTION', 'UNBLOCK_RENEW_PERMIT', 'UNBLOCK_RENEW_QUALIFICATION', 'UNBLOCK_CLOSE_MA',
@@ -60,6 +60,10 @@ describe('i18n', () => {
     expect(renderReason({ code: 'DATA_STALE', params: { source_name: 'last_flight', age_hours: -5 } }, names))
       .toBe('חותמת הזמן ממקור מועד הטיסה האחרונה היא בעתיד (5 שעות) — לא ניתן לאשר כשירות');
     expect(names.ref('ASSIGNMENT', 'ניווט')).toBe('שיבוץ למשימה "ניווט" — המטוס אינו כשיר עוד, יש לבדוק מחדש');
+    expect(renderReason({
+      code: 'EXPIRES_WITHIN_WINDOW',
+      params: { source: 'INSPECTION', ref: 'LG_INSP', unit: 'LDG', margin: 3, within: 0, until: 5 },
+    }, names)).toBe('תוקף בדיקת כני נסע יפוג בטווח "תוך 0 ועד 5 נח׳": נותרו 3 נח׳ לאחר המשימה');
     const later = renderReason({
       code: 'JEOPARDIZES_LATER_ASSIGNMENT',
       params: { mission_id: 9, mission_name: 'ניווט', source: 'INSPECTION', ref: 'LG_INSP', unit: 'LDG', over_by: 2 },

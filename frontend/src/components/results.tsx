@@ -46,7 +46,10 @@ export function ReasonList({ reasons, kind = 'reason' }: { reasons: Reason[]; ki
 export function ScoreBreakdown({ breakdown }: {
   breakdown: Record<string, { value: number; weight: number; contribution: number }>;
 }) {
-  const terms = ['risk', 'best_fit', 'balance', 'capacity', 'base_match', 'warnings'];
+  // expiry_window is active only when the mission defines expiration windows (weight 0 otherwise)
+  const terms = ['risk', 'best_fit', 'balance', 'capacity', 'base_match', 'warnings', 'expiry_window']
+    .filter((term) => breakdown[term] && (term !== 'expiry_window' || breakdown[term].weight > 0));
+  const totalWeight = terms.reduce((acc, term) => acc + (breakdown[term]?.weight ?? 0), 0) || 1;
   return (
     <Stack gap={6} data-testid="score-breakdown">
       {terms.map((term) => {
@@ -57,7 +60,7 @@ export function ScoreBreakdown({ breakdown }: {
             <Group justify="space-between" gap="xs">
               <Text size="xs">{tk(`score.${term}`)}</Text>
               <Text size="xs" c="dimmed" className="ao-num">
-                {formatNumber(b.contribution, 1)} / {formatNumber(b.weight * 100, 0)}
+                {formatNumber(b.contribution, 1)} / {formatNumber((b.weight / totalWeight) * 100, 0)}
               </Text>
             </Group>
             <Progress value={b.value * 100} size="sm" aria-label={tk(`score.${term}`)} />
