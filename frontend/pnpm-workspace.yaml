@@ -1,0 +1,4 @@
+allowBuilds:
+  esbuild: false
+overrides:
+  playwright-core: 1.63.0

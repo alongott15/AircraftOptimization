@@ -1,0 +1,44 @@
+# POC deployment (ARCHITECTURE.md §8): offline-friendly, no runtime CDN.
+#   make setup && docker compose up --build     → http://localhost:8080 (needs .env)
+services:
+  init:
+    build: ./backend
+    command: >
+      sh -c "python -m app.seed.generator --anchor now --seed 42 --out /app/data/poc.sqlite &&
+             python -m app.ml.train --all"
+    env_file: .env
+    environment:
+      APP_SQLITE_PATH: /app/data/poc.sqlite
+      APP_MODELS_DIR: /app/data/models
+    volumes:
+      - ao-data:/app/data
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      APP_SQLITE_PATH: /app/data/poc.sqlite
+      APP_MODELS_DIR: /app/data/models
+      APP_CORS_ORIGINS: http://localhost:8080
+      # Only nginx can reach the backend (no published port), so its X-Forwarded-For is trusted.
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - ao-data:/app/data
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      retries: 6
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8080:80"  # POC runs APP_ENV=dev over http — never expose it beyond this machine
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  ao-data:

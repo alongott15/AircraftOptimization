@@ -1,0 +1,165 @@
+/* DESIGN_SYSTEM.md §2 — status tokens for light/dark, RTL helpers, motion. Logical properties only. */
+:root {
+  --ao-expired-fg: #b42318;
+  --ao-expired-bg: #fee4e2;
+  --ao-expiring-fg: #b54708;
+  --ao-expiring-bg: #fef0c7;
+  --ao-ok-fg: #067647;
+  --ao-ok-bg: #dcfae6;
+  --ao-unknown-fg: #475467;
+  --ao-unknown-bg: #eaecf0;
+  --ao-info-fg: #175cd3;
+  --ao-info-bg: #d1e9ff;
+  --ao-bg: #f5f7fa;
+  --ao-surface: #ffffff;
+}
+
+[data-mantine-color-scheme='dark'] {
+  --ao-expired-fg: #f97066;
+  --ao-expired-bg: #3b1214;
+  --ao-expiring-fg: #fdb022;
+  --ao-expiring-bg: #3a2a0a;
+  --ao-ok-fg: #47cd89;
+  --ao-ok-bg: #0b2b1c;
+  --ao-unknown-fg: #98a2b3;
+  --ao-unknown-bg: #1f2737;
+  --ao-info-fg: #84caff;
+  --ao-info-bg: #0f2747;
+  --ao-bg: #0b1220;
+  --ao-surface: #121a2b;
+}
+
+/* WCAG AA: Mantine's default dimmed grey (#868e96) is only 3.3:1 on white. */
+:root[data-mantine-color-scheme='light'] {
+  --mantine-color-dimmed: #4b5563;
+}
+:root[data-mantine-color-scheme='dark'] {
+  --mantine-color-dimmed: #a6b0bf;
+}
+
+/* Fixed dark red for filled alerts so white text stays ≥ 4.5:1 in both schemes. */
+.ao-danger-fill {
+  background-color: #b42318 !important;
+  color: #ffffff !important;
+}
+
+.ao-text-expired {
+  color: var(--ao-expired-fg);
+}
+
+body {
+  font-family: Heebo, Arial, sans-serif;
+  background: var(--ao-bg);
+}
+
+.ao-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.ao-tail {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Tail numbers, MA numbers and codes are isolated LTR tokens — never break them across lines. */
+bdi[dir='ltr'] {
+  white-space: nowrap;
+}
+
+.ao-row {
+  cursor: pointer;
+  border-inline-start: 4px solid transparent;
+}
+.ao-row[data-status='EXPIRED'] {
+  border-inline-start-color: var(--ao-expired-fg);
+  background: var(--ao-expired-bg);
+}
+.ao-row[data-status='EXPIRING_SOON'] {
+  border-inline-start-color: var(--ao-expiring-fg);
+}
+.ao-row[data-status='UNKNOWN'] {
+  border-inline-start-color: var(--ao-unknown-fg);
+}
+
+.ao-tile {
+  border-inline-start: 4px solid var(--ao-ok-fg);
+}
+.ao-tile[data-status='EXPIRED'] {
+  border-inline-start-color: var(--ao-expired-fg);
+  background: var(--ao-expired-bg);
+}
+.ao-tile[data-status='EXPIRING_SOON'] {
+  border-inline-start-color: var(--ao-expiring-fg);
+}
+.ao-tile[data-status='UNKNOWN'] {
+  border-inline-start-color: var(--ao-unknown-fg);
+}
+
+[dir='rtl'] .ao-icon-dir {
+  transform: scaleX(-1);
+}
+
+@keyframes ao-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
+  }
+}
+.ao-pulse {
+  animation: ao-pulse 1.6s ease-in-out infinite;
+}
+
+.ao-hotspot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 28px;
+  block-size: 28px;
+  padding-inline: 6px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+.ao-hotspot:focus-visible {
+  outline: 3px solid #5b8def;
+  outline-offset: 2px;
+}
+
+.ao-viewer {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 480px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #dfe7f1 0%, #f5f7fa 100%);
+}
+[data-mantine-color-scheme='dark'] .ao-viewer {
+  background: linear-gradient(180deg, #16223a 0%, #0b1220 100%);
+}
+
+.ao-info-card {
+  direction: rtl;
+  min-inline-size: 220px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ao-surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ao-pulse {
+    animation: none;
+  }
+}

@@ -1,0 +1,5365 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Fleet Usability Optimizer API",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/v1/health": {
+   "get": {
+    "tags": [
+     "health"
+    ],
+    "summary": "Health",
+    "operationId": "health_api_v1_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/ready": {
+   "get": {
+    "tags": [
+     "health"
+    ],
+    "summary": "Ready",
+    "operationId": "ready_api_v1_ready_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ReadyOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/login": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Login",
+    "operationId": "login_api_v1_auth_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoginIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/config": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Auth Config",
+    "operationId": "auth_config_api_v1_auth_config_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AuthConfigOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/oidc/login": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Oidc Login",
+    "operationId": "oidc_login_api_v1_auth_oidc_login_get",
+    "responses": {
+     "302": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/oidc/callback": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Oidc Callback",
+    "operationId": "oidc_callback_api_v1_auth_oidc_callback_get",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "maxLength": 2048,
+       "default": "",
+       "title": "Code"
+      }
+     },
+     {
+      "name": "state",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "maxLength": 256,
+       "default": "",
+       "title": "State"
+      }
+     }
+    ],
+    "responses": {
+     "302": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/logout": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Logout",
+    "operationId": "logout_api_v1_auth_logout_post",
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     }
+    }
+   }
+  },
+  "/api/v1/auth/me": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Me",
+    "operationId": "me_api_v1_auth_me_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reference": {
+   "get": {
+    "tags": [
+     "reference"
+    ],
+    "summary": "Reference",
+    "operationId": "reference_api_v1_reference_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ReferenceOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/fleet/summary": {
+   "get": {
+    "tags": [
+     "fleet"
+    ],
+    "summary": "Fleet Summary",
+    "operationId": "fleet_summary_api_v1_fleet_summary_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FleetSummaryOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/fleet/alerts": {
+   "get": {
+    "tags": [
+     "fleet"
+    ],
+    "summary": "Fleet Alerts",
+    "operationId": "fleet_alerts_api_v1_fleet_alerts_get",
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "EXPIRED,EXPIRING_SOON,UNKNOWN",
+       "title": "Status"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 500,
+       "minimum": 1,
+       "default": 100,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AlertOut"
+         },
+         "title": "Response Fleet Alerts Api V1 Fleet Alerts Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/fleet/timeline": {
+   "get": {
+    "tags": [
+     "fleet"
+    ],
+    "summary": "Fleet Timeline",
+    "operationId": "fleet_timeline_api_v1_fleet_timeline_get",
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 365,
+       "minimum": 1,
+       "default": 30,
+       "title": "Days"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TimelineItemOut"
+         },
+         "title": "Response Fleet Timeline Api V1 Fleet Timeline Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/fleet/data-freshness": {
+   "get": {
+    "tags": [
+     "fleet"
+    ],
+    "summary": "Fleet Freshness",
+    "operationId": "fleet_freshness_api_v1_fleet_data_freshness_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SourceFreshnessOut"
+         },
+         "type": "array",
+         "title": "Response Fleet Freshness Api V1 Fleet Data Freshness Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/aircraft": {
+   "get": {
+    "tags": [
+     "aircraft"
+    ],
+    "summary": "List Aircraft",
+    "operationId": "list_aircraft_api_v1_aircraft_get",
+    "parameters": [
+     {
+      "name": "type_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Type Code"
+      }
+     },
+     {
+      "name": "base_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Base Code"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "compliance_status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Compliance Status"
+      }
+     },
+     {
+      "name": "qualification_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Qualification Code"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 16
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "compliance_status",
+       "title": "Sort"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Page Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Page_AircraftSummaryOut_"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/aircraft/{tail_number}": {
+   "get": {
+    "tags": [
+     "aircraft"
+    ],
+    "summary": "Aircraft Detail",
+    "operationId": "aircraft_detail_api_v1_aircraft__tail_number__get",
+    "parameters": [
+     {
+      "name": "tail_number",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tail Number"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AircraftDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/aircraft/{tail_number}/flights": {
+   "get": {
+    "tags": [
+     "aircraft"
+    ],
+    "summary": "Aircraft Flights",
+    "operationId": "aircraft_flights_api_v1_aircraft__tail_number__flights_get",
+    "parameters": [
+     {
+      "name": "tail_number",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tail Number"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Page Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Aircraft Flights Api V1 Aircraft  Tail Number  Flights Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/aircraft/{tail_number}/risk": {
+   "get": {
+    "tags": [
+     "aircraft"
+    ],
+    "summary": "Aircraft Risk",
+    "operationId": "aircraft_risk_api_v1_aircraft__tail_number__risk_get",
+    "parameters": [
+     {
+      "name": "tail_number",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tail Number"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RiskOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions": {
+   "post": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Create Mission",
+    "operationId": "create_mission_api_v1_missions_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MissionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MissionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "List Missions",
+    "operationId": "list_missions_api_v1_missions_get",
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Page Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Page_MissionOut_"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}": {
+   "get": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Get Mission",
+    "operationId": "get_mission_api_v1_missions__mission_id__get",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MissionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Update Mission",
+    "operationId": "update_mission_api_v1_missions__mission_id__patch",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MissionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MissionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}/duplicate": {
+   "post": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Duplicate Mission",
+    "operationId": "duplicate_mission_api_v1_missions__mission_id__duplicate_post",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MissionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}/cancel": {
+   "post": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Cancel Mission",
+    "operationId": "cancel_mission_api_v1_missions__mission_id__cancel_post",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MissionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}/optimize": {
+   "post": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Optimize",
+    "operationId": "optimize_api_v1_missions__mission_id__optimize_post",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/OptimizeIn"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OptimizationRunOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}/runs": {
+   "get": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Mission Runs",
+    "operationId": "mission_runs_api_v1_missions__mission_id__runs_get",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/RunSummaryOut"
+         },
+         "title": "Response Mission Runs Api V1 Missions  Mission Id  Runs Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/optimization-runs/{run_id}": {
+   "get": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Get Run",
+    "operationId": "get_run_api_v1_optimization_runs__run_id__get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OptimizationRunOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}/assign": {
+   "post": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Assign",
+    "operationId": "assign_api_v1_missions__mission_id__assign_post",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AssignIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AssignmentOut"
+         },
+         "title": "Response Assign Api V1 Missions  Mission Id  Assign Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/missions/{mission_id}/unassign": {
+   "post": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Unassign",
+    "operationId": "unassign_api_v1_missions__mission_id__unassign_post",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Mission Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MissionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/eligibility/check": {
+   "post": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Eligibility Check",
+    "operationId": "eligibility_check_api_v1_eligibility_check_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EligibilityCheckIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CandidateOut"
+         },
+         "type": "array",
+         "title": "Response Eligibility Check Api V1 Eligibility Check Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/planning/horizon": {
+   "post": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Horizon Plan",
+    "operationId": "horizon_plan_api_v1_planning_horizon_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HorizonIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HorizonPlanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/planning/horizon/apply": {
+   "post": {
+    "tags": [
+     "optimization"
+    ],
+    "summary": "Horizon Apply",
+    "operationId": "horizon_apply_api_v1_planning_horizon_apply_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HorizonApplyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HorizonApplyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/ml/models": {
+   "get": {
+    "tags": [
+     "ml"
+    ],
+    "summary": "Ml Models",
+    "operationId": "ml_models_api_v1_ml_models_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ModelOut"
+         },
+         "type": "array",
+         "title": "Response Ml Models Api V1 Ml Models Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/ml/duration-buffer": {
+   "get": {
+    "tags": [
+     "ml"
+    ],
+    "summary": "Duration Buffer",
+    "operationId": "duration_buffer_api_v1_ml_duration_buffer_get",
+    "parameters": [
+     {
+      "name": "mission_type",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mission Type"
+      }
+     },
+     {
+      "name": "type_code",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Type Code"
+      }
+     },
+     {
+      "name": "duration_hours",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "number",
+       "maximum": 24,
+       "exclusiveMinimum": 0,
+       "title": "Duration Hours"
+      }
+     },
+     {
+      "name": "landings",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 1,
+       "title": "Landings"
+      }
+     },
+     {
+      "name": "touch_and_goes",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 0,
+       "default": 0,
+       "title": "Touch And Goes"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DurationSuggestionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/ml/models/{model_name}/retrain": {
+   "post": {
+    "tags": [
+     "ml"
+    ],
+    "summary": "Retrain",
+    "operationId": "retrain_api_v1_ml_models__model_name__retrain_post",
+    "parameters": [
+     {
+      "name": "model_name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Model Name"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Retrain Api V1 Ml Models  Model Name  Retrain Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/ml/jobs/{job_id}": {
+   "get": {
+    "tags": [
+     "ml"
+    ],
+    "summary": "Ml Job",
+    "operationId": "ml_job_api_v1_ml_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ml Job Api V1 Ml Jobs  Job Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/settings/policy": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Get Policy",
+    "operationId": "get_policy_api_v1_settings_policy_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Get Policy Api V1 Settings Policy Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Put Policy",
+    "operationId": "put_policy_api_v1_settings_policy_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PolicyUpdateIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Put Policy Api V1 Settings Policy Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/settings/hangar-capacity": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Get Hangar",
+    "operationId": "get_hangar_api_v1_settings_hangar_capacity_get",
+    "parameters": [
+     {
+      "name": "base_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Base Code"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/HangarCapacityOut"
+         },
+         "title": "Response Get Hangar Api V1 Settings Hangar Capacity Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Put Hangar",
+    "operationId": "put_hangar_api_v1_settings_hangar_capacity_put",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/HangarCapacityIn"
+        },
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/HangarCapacityOut"
+         },
+         "title": "Response Put Hangar Api V1 Settings Hangar Capacity Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/audit": {
+   "get": {
+    "tags": [
+     "audit"
+    ],
+    "summary": "Audit Log",
+    "operationId": "audit_log_api_v1_audit_get",
+    "parameters": [
+     {
+      "name": "user_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "User Id"
+      }
+     },
+     {
+      "name": "action",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Action"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Page Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Page_AuditOut_"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AircraftDetailOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "engine_count": {
+      "type": "integer",
+      "title": "Engine Count"
+     },
+     "base_code": {
+      "type": "string",
+      "title": "Base Code"
+     },
+     "operational_status": {
+      "type": "string",
+      "title": "Operational Status"
+     },
+     "derived_status": {
+      "type": "string",
+      "title": "Derived Status"
+     },
+     "compliance_status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Compliance Status"
+     },
+     "expired_count": {
+      "type": "integer",
+      "title": "Expired Count"
+     },
+     "expiring_soon_count": {
+      "type": "integer",
+      "title": "Expiring Soon Count"
+     },
+     "open_ma_count": {
+      "type": "integer",
+      "title": "Open Ma Count"
+     },
+     "grounding_ma_count": {
+      "type": "integer",
+      "title": "Grounding Ma Count"
+     },
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     },
+     "risk_band": {
+      "type": "string",
+      "title": "Risk Band"
+     },
+     "risk_probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Probability"
+     },
+     "next_due": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/NextDueOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "serial_number": {
+      "type": "string",
+      "title": "Serial Number"
+     },
+     "manufacture_date": {
+      "type": "string",
+      "title": "Manufacture Date"
+     },
+     "type_name_he": {
+      "type": "string",
+      "title": "Type Name He"
+     },
+     "last_flight_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Flight At"
+     },
+     "max_endurance_hours": {
+      "type": "number",
+      "title": "Max Endurance Hours"
+     },
+     "model": {
+      "$ref": "#/components/schemas/ModelShapeOut"
+     },
+     "counters": {
+      "items": {
+       "$ref": "#/components/schemas/CounterOut"
+      },
+      "type": "array",
+      "title": "Counters"
+     },
+     "inspections": {
+      "items": {
+       "$ref": "#/components/schemas/InspectionOut"
+      },
+      "type": "array",
+      "title": "Inspections"
+     },
+     "permits": {
+      "items": {
+       "$ref": "#/components/schemas/PermitOut"
+      },
+      "type": "array",
+      "title": "Permits"
+     },
+     "maintenance_actions": {
+      "items": {
+       "$ref": "#/components/schemas/MaintenanceActionOut"
+      },
+      "type": "array",
+      "title": "Maintenance Actions"
+     },
+     "qualifications": {
+      "items": {
+       "$ref": "#/components/schemas/QualificationOut"
+      },
+      "type": "array",
+      "title": "Qualifications"
+     },
+     "idle": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/IdleOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "risk": {
+      "$ref": "#/components/schemas/RiskOut"
+     },
+     "data_freshness": {
+      "$ref": "#/components/schemas/FreshnessOut"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "type_code",
+     "engine_count",
+     "base_code",
+     "operational_status",
+     "derived_status",
+     "compliance_status",
+     "expired_count",
+     "expiring_soon_count",
+     "open_ma_count",
+     "grounding_ma_count",
+     "available",
+     "risk_band",
+     "risk_probability",
+     "next_due",
+     "serial_number",
+     "manufacture_date",
+     "type_name_he",
+     "last_flight_at",
+     "max_endurance_hours",
+     "model",
+     "counters",
+     "inspections",
+     "permits",
+     "maintenance_actions",
+     "qualifications",
+     "idle",
+     "risk",
+     "data_freshness"
+    ],
+    "title": "AircraftDetailOut"
+   },
+   "AircraftSummaryOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "engine_count": {
+      "type": "integer",
+      "title": "Engine Count"
+     },
+     "base_code": {
+      "type": "string",
+      "title": "Base Code"
+     },
+     "operational_status": {
+      "type": "string",
+      "title": "Operational Status"
+     },
+     "derived_status": {
+      "type": "string",
+      "title": "Derived Status"
+     },
+     "compliance_status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Compliance Status"
+     },
+     "expired_count": {
+      "type": "integer",
+      "title": "Expired Count"
+     },
+     "expiring_soon_count": {
+      "type": "integer",
+      "title": "Expiring Soon Count"
+     },
+     "open_ma_count": {
+      "type": "integer",
+      "title": "Open Ma Count"
+     },
+     "grounding_ma_count": {
+      "type": "integer",
+      "title": "Grounding Ma Count"
+     },
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     },
+     "risk_band": {
+      "type": "string",
+      "title": "Risk Band"
+     },
+     "risk_probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Probability"
+     },
+     "next_due": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/NextDueOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "type_code",
+     "engine_count",
+     "base_code",
+     "operational_status",
+     "derived_status",
+     "compliance_status",
+     "expired_count",
+     "expiring_soon_count",
+     "open_ma_count",
+     "grounding_ma_count",
+     "available",
+     "risk_band",
+     "risk_probability",
+     "next_due"
+    ],
+    "title": "AircraftSummaryOut"
+   },
+   "AlertOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "ref": {
+      "type": "string",
+      "title": "Ref"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     },
+     "remaining": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining"
+     },
+     "due_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due At"
+     },
+     "missing_kind": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Missing Kind"
+     },
+     "missing_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Missing Code"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "source",
+     "ref",
+     "unit",
+     "status",
+     "remaining",
+     "due_at",
+     "missing_kind",
+     "missing_code"
+    ],
+    "title": "AlertOut"
+   },
+   "AssignIn": {
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "maxLength": 36,
+      "minLength": 1,
+      "title": "Run Id"
+     },
+     "set_index": {
+      "type": "integer",
+      "maximum": 3.0,
+      "minimum": 0.0,
+      "title": "Set Index"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "run_id",
+     "set_index"
+    ],
+    "title": "AssignIn"
+   },
+   "AssignmentOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tail Number"
+     },
+     "window_start": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Window Start"
+     },
+     "window_end": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Window End"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "run_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Run Id"
+     },
+     "set_index": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Set Index"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "window_start",
+     "window_end",
+     "status",
+     "run_id",
+     "set_index"
+    ],
+    "title": "AssignmentOut"
+   },
+   "AuditOut": {
+    "properties": {
+     "audit_id": {
+      "type": "integer",
+      "title": "Audit Id"
+     },
+     "at": {
+      "type": "string",
+      "title": "At"
+     },
+     "user_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "User Id"
+     },
+     "username": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Username"
+     },
+     "action": {
+      "type": "string",
+      "title": "Action"
+     },
+     "entity_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entity Type"
+     },
+     "entity_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entity Id"
+     },
+     "details": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Details"
+     },
+     "request_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Request Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "audit_id",
+     "at",
+     "user_id",
+     "username",
+     "action",
+     "entity_type",
+     "entity_id",
+     "details",
+     "request_id"
+    ],
+    "title": "AuditOut"
+   },
+   "AuthConfigOut": {
+    "properties": {
+     "mode": {
+      "type": "string",
+      "enum": [
+       "local",
+       "oidc"
+      ],
+      "title": "Mode"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mode"
+    ],
+    "title": "AuthConfigOut"
+   },
+   "CandidateOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "base_code": {
+      "type": "string",
+      "title": "Base Code"
+     },
+     "eligible": {
+      "type": "boolean",
+      "title": "Eligible"
+     },
+     "score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Score"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     },
+     "score_breakdown": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "$ref": "#/components/schemas/TermOut"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Score Breakdown"
+     },
+     "reasons": {
+      "items": {
+       "$ref": "#/components/schemas/ReasonOut"
+      },
+      "type": "array",
+      "title": "Reasons"
+     },
+     "warnings": {
+      "items": {
+       "$ref": "#/components/schemas/ReasonOut"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "unblock_hints": {
+      "items": {
+       "$ref": "#/components/schemas/ReasonOut"
+      },
+      "type": "array",
+      "title": "Unblock Hints"
+     },
+     "projections": {
+      "items": {
+       "$ref": "#/components/schemas/ProjectionOut"
+      },
+      "type": "array",
+      "title": "Projections"
+     },
+     "risk_probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Probability"
+     },
+     "week_before": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Week Before"
+     },
+     "week_after": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Week After"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "type_code",
+     "base_code",
+     "eligible",
+     "score",
+     "rank",
+     "score_breakdown",
+     "reasons",
+     "warnings",
+     "unblock_hints",
+     "projections",
+     "risk_probability"
+    ],
+    "title": "CandidateOut"
+   },
+   "CodeList": {
+    "properties": {
+     "reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reasons"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "unblock": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Unblock"
+     }
+    },
+    "type": "object",
+    "required": [
+     "reasons",
+     "warnings",
+     "unblock"
+    ],
+    "title": "CodeList"
+   },
+   "CounterOut": {
+    "properties": {
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "value": {
+      "type": "number",
+      "title": "Value"
+     },
+     "as_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "As Of"
+     }
+    },
+    "type": "object",
+    "required": [
+     "unit",
+     "value",
+     "as_of"
+    ],
+    "title": "CounterOut"
+   },
+   "DeferralOut": {
+    "properties": {
+     "expires_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expires At"
+     },
+     "limit_unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Limit Unit"
+     },
+     "limit_value": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Limit Value"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     },
+     "remaining_days": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining Days"
+     }
+    },
+    "type": "object",
+    "required": [
+     "expires_at",
+     "limit_unit",
+     "limit_value",
+     "status",
+     "remaining_days"
+    ],
+    "title": "DeferralOut"
+   },
+   "DurationSuggestionOut": {
+    "properties": {
+     "suggested_buffer_pct": {
+      "type": "number",
+      "title": "Suggested Buffer Pct"
+     },
+     "p50_ratio": {
+      "type": "number",
+      "title": "P50 Ratio"
+     },
+     "p90_ratio": {
+      "type": "number",
+      "title": "P90 Ratio"
+     },
+     "model_version": {
+      "type": "string",
+      "title": "Model Version"
+     }
+    },
+    "type": "object",
+    "required": [
+     "suggested_buffer_pct",
+     "p50_ratio",
+     "p90_ratio",
+     "model_version"
+    ],
+    "title": "DurationSuggestionOut"
+   },
+   "EligibilityCheckIn": {
+    "properties": {
+     "mission": {
+      "$ref": "#/components/schemas/MissionIn"
+     },
+     "tail_numbers": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tail Numbers"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "mission"
+    ],
+    "title": "EligibilityCheckIn"
+   },
+   "FleetSummaryOut": {
+    "properties": {
+     "as_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "As Of"
+     },
+     "total_aircraft": {
+      "type": "integer",
+      "title": "Total Aircraft"
+     },
+     "available_now": {
+      "type": "integer",
+      "title": "Available Now"
+     },
+     "availability_pct": {
+      "type": "number",
+      "title": "Availability Pct"
+     },
+     "aircraft_with_expired_items": {
+      "type": "integer",
+      "title": "Aircraft With Expired Items"
+     },
+     "items_expiring_7d": {
+      "type": "integer",
+      "title": "Items Expiring 7D"
+     },
+     "aircraft_unknown": {
+      "type": "integer",
+      "title": "Aircraft Unknown"
+     },
+     "open_grounding_mas": {
+      "type": "integer",
+      "title": "Open Grounding Mas"
+     },
+     "in_maintenance": {
+      "type": "integer",
+      "title": "In Maintenance"
+     },
+     "by_type": {
+      "items": {
+       "$ref": "#/components/schemas/TypeCountOut"
+      },
+      "type": "array",
+      "title": "By Type"
+     }
+    },
+    "type": "object",
+    "required": [
+     "as_of",
+     "total_aircraft",
+     "available_now",
+     "availability_pct",
+     "aircraft_with_expired_items",
+     "items_expiring_7d",
+     "aircraft_unknown",
+     "open_grounding_mas",
+     "in_maintenance",
+     "by_type"
+    ],
+    "title": "FleetSummaryOut"
+   },
+   "FreshnessOut": {
+    "properties": {
+     "oldest_source_updated_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Oldest Source Updated At"
+     },
+     "is_stale": {
+      "type": "boolean",
+      "title": "Is Stale"
+     }
+    },
+    "type": "object",
+    "required": [
+     "oldest_source_updated_at",
+     "is_stale"
+    ],
+    "title": "FreshnessOut"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HangarCapacityIn": {
+    "properties": {
+     "base_code": {
+      "type": "string",
+      "maxLength": 8,
+      "minLength": 1,
+      "title": "Base Code"
+     },
+     "iso_week": {
+      "type": "string",
+      "pattern": "^\\d{4}-W\\d{2}$",
+      "title": "Iso Week"
+     },
+     "slots": {
+      "type": "integer",
+      "maximum": 50.0,
+      "minimum": 0.0,
+      "title": "Slots"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "base_code",
+     "iso_week",
+     "slots"
+    ],
+    "title": "HangarCapacityIn"
+   },
+   "HangarCapacityOut": {
+    "properties": {
+     "base_code": {
+      "type": "string",
+      "title": "Base Code"
+     },
+     "iso_week": {
+      "type": "string",
+      "title": "Iso Week"
+     },
+     "slots": {
+      "type": "integer",
+      "title": "Slots"
+     }
+    },
+    "type": "object",
+    "required": [
+     "base_code",
+     "iso_week",
+     "slots"
+    ],
+    "title": "HangarCapacityOut"
+   },
+   "HealthOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "HealthOut"
+   },
+   "HorizonAppliedOut": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "tail_numbers": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tail Numbers"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "tail_numbers"
+    ],
+    "title": "HorizonAppliedOut"
+   },
+   "HorizonApplyIn": {
+    "properties": {
+     "assignments": {
+      "items": {
+       "$ref": "#/components/schemas/HorizonAssignmentIn"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Assignments"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "assignments"
+    ],
+    "title": "HorizonApplyIn"
+   },
+   "HorizonApplyOut": {
+    "properties": {
+     "applied": {
+      "items": {
+       "$ref": "#/components/schemas/HorizonAppliedOut"
+      },
+      "type": "array",
+      "title": "Applied"
+     }
+    },
+    "type": "object",
+    "required": [
+     "applied"
+    ],
+    "title": "HorizonApplyOut"
+   },
+   "HorizonAssignmentIn": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "aircraft_ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Aircraft Ids"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "mission_id",
+     "aircraft_ids"
+    ],
+    "title": "HorizonAssignmentIn"
+   },
+   "HorizonAssignmentOut": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "aircraft_ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Aircraft Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "aircraft_ids"
+    ],
+    "title": "HorizonAssignmentOut"
+   },
+   "HorizonIn": {
+    "properties": {
+     "mission_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 50
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mission Ids"
+     },
+     "date_from": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Date From"
+     },
+     "date_to": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Date To"
+     },
+     "weights_preset": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "BALANCED",
+         "MAX_SAFETY",
+         "MAX_AVAILABILITY"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Weights Preset"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "HorizonIn"
+   },
+   "HorizonMissionOut": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "start_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start At"
+     },
+     "end_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End At"
+     },
+     "required": {
+      "type": "integer",
+      "title": "Required"
+     },
+     "eligible_count": {
+      "type": "integer",
+      "title": "Eligible Count"
+     },
+     "assigned": {
+      "items": {
+       "$ref": "#/components/schemas/HorizonSeatOut"
+      },
+      "type": "array",
+      "title": "Assigned"
+     },
+     "shortfall": {
+      "type": "integer",
+      "title": "Shortfall"
+     },
+     "overlaps_with": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Overlaps With"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "name",
+     "start_at",
+     "end_at",
+     "required",
+     "eligible_count",
+     "assigned",
+     "shortfall",
+     "overlaps_with"
+    ],
+    "title": "HorizonMissionOut"
+   },
+   "HorizonPlanOut": {
+    "properties": {
+     "solver_status": {
+      "type": "string",
+      "enum": [
+       "OPTIMAL",
+       "FEASIBLE",
+       "INFEASIBLE",
+       "SKIPPED"
+      ],
+      "title": "Solver Status"
+     },
+     "objective": {
+      "type": "number",
+      "title": "Objective"
+     },
+     "duration_ms": {
+      "type": "integer",
+      "title": "Duration Ms"
+     },
+     "clock_now": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock Now"
+     },
+     "missions": {
+      "items": {
+       "$ref": "#/components/schemas/HorizonMissionOut"
+      },
+      "type": "array",
+      "title": "Missions"
+     },
+     "assignments": {
+      "items": {
+       "$ref": "#/components/schemas/HorizonAssignmentOut"
+      },
+      "type": "array",
+      "title": "Assignments"
+     }
+    },
+    "type": "object",
+    "required": [
+     "solver_status",
+     "objective",
+     "duration_ms",
+     "clock_now",
+     "missions",
+     "assignments"
+    ],
+    "title": "HorizonPlanOut"
+   },
+   "HorizonSeatOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Score"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "score"
+    ],
+    "title": "HorizonSeatOut"
+   },
+   "IdleOut": {
+    "properties": {
+     "idle_days": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idle Days"
+     },
+     "limit_days": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Limit Days"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "idle_days",
+     "limit_days",
+     "status"
+    ],
+    "title": "IdleOut"
+   },
+   "InspectionOut": {
+    "properties": {
+     "inspection_code": {
+      "type": "string",
+      "title": "Inspection Code"
+     },
+     "zone_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Zone Code"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     },
+     "limits": {
+      "items": {
+       "$ref": "#/components/schemas/LimitOut"
+      },
+      "type": "array",
+      "title": "Limits"
+     },
+     "predicted_due_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Predicted Due At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "inspection_code",
+     "zone_code",
+     "status",
+     "limits",
+     "predicted_due_at"
+    ],
+    "title": "InspectionOut"
+   },
+   "LimitOut": {
+    "properties": {
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "due_value": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due Value"
+     },
+     "due_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due At"
+     },
+     "remaining": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining"
+     },
+     "interval": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Interval"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "unit",
+     "due_value",
+     "due_at",
+     "remaining",
+     "interval",
+     "status"
+    ],
+    "title": "LimitOut"
+   },
+   "LoginIn": {
+    "properties": {
+     "username": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Password"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "username",
+     "password"
+    ],
+    "title": "LoginIn"
+   },
+   "MaintenanceActionOut": {
+    "properties": {
+     "ma_number": {
+      "type": "string",
+      "title": "Ma Number"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "ata_chapter": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ata Chapter"
+     },
+     "zone_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Zone Code"
+     },
+     "severity": {
+      "type": "string",
+      "enum": [
+       "GROUNDING",
+       "DEFERRED",
+       "MONITOR"
+      ],
+      "title": "Severity"
+     },
+     "mel_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mel Category"
+     },
+     "opened_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Opened At"
+     },
+     "deferral": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/DeferralOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "affects_qualification_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Affects Qualification Code"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ma_number",
+     "title",
+     "description",
+     "ata_chapter",
+     "zone_code",
+     "severity",
+     "mel_category",
+     "opened_at",
+     "deferral",
+     "affects_qualification_code",
+     "status"
+    ],
+    "title": "MaintenanceActionOut"
+   },
+   "MissionIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "mission_type": {
+      "type": "string",
+      "enum": [
+       "TRAINING",
+       "TRANSPORT",
+       "FERRY",
+       "OTHER"
+      ],
+      "title": "Mission Type"
+     },
+     "required_aircraft_count": {
+      "type": "integer",
+      "maximum": 20.0,
+      "minimum": 1.0,
+      "title": "Required Aircraft Count"
+     },
+     "start_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Start At"
+     },
+     "est_duration_hours": {
+      "type": "number",
+      "maximum": 24.0,
+      "minimum": 0.1,
+      "title": "Est Duration Hours"
+     },
+     "est_landings": {
+      "type": "integer",
+      "maximum": 50.0,
+      "minimum": 1.0,
+      "title": "Est Landings"
+     },
+     "est_touch_and_goes": {
+      "type": "integer",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Est Touch And Goes",
+      "default": 0
+     },
+     "est_engine_starts": {
+      "type": "integer",
+      "maximum": 20.0,
+      "minimum": 1.0,
+      "title": "Est Engine Starts",
+      "default": 1
+     },
+     "departure_base_code": {
+      "type": "string",
+      "maxLength": 8,
+      "minLength": 1,
+      "title": "Departure Base Code"
+     },
+     "required_qualifications": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 10,
+      "title": "Required Qualifications"
+     },
+     "engine_requirement": {
+      "type": "string",
+      "enum": [
+       "ANY",
+       "SINGLE",
+       "TWIN",
+       "MIN_2"
+      ],
+      "title": "Engine Requirement",
+      "default": "ANY"
+     },
+     "same_type_required": {
+      "type": "boolean",
+      "title": "Same Type Required",
+      "default": false
+     },
+     "priority": {
+      "type": "integer",
+      "maximum": 5.0,
+      "minimum": 1.0,
+      "title": "Priority",
+      "default": 3
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "force_include": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Force Include"
+     },
+     "force_exclude": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Force Exclude"
+     },
+     "overrides": {
+      "$ref": "#/components/schemas/MissionOverridesIn"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "name",
+     "mission_type",
+     "required_aircraft_count",
+     "start_at",
+     "est_duration_hours",
+     "est_landings",
+     "departure_base_code"
+    ],
+    "title": "MissionIn"
+   },
+   "MissionOut": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "mission_type": {
+      "type": "string",
+      "enum": [
+       "TRAINING",
+       "TRANSPORT",
+       "FERRY",
+       "OTHER"
+      ],
+      "title": "Mission Type"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "DRAFT",
+       "OPTIMIZED",
+       "ASSIGNED",
+       "CANCELLED",
+       "COMPLETED"
+      ],
+      "title": "Status"
+     },
+     "required_aircraft_count": {
+      "type": "integer",
+      "title": "Required Aircraft Count"
+     },
+     "start_at": {
+      "type": "string",
+      "title": "Start At"
+     },
+     "end_at": {
+      "type": "string",
+      "title": "End At"
+     },
+     "est_duration_hours": {
+      "type": "number",
+      "title": "Est Duration Hours"
+     },
+     "est_landings": {
+      "type": "integer",
+      "title": "Est Landings"
+     },
+     "est_touch_and_goes": {
+      "type": "integer",
+      "title": "Est Touch And Goes"
+     },
+     "est_engine_starts": {
+      "type": "integer",
+      "title": "Est Engine Starts"
+     },
+     "departure_base_code": {
+      "type": "string",
+      "title": "Departure Base Code"
+     },
+     "required_qualifications": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Required Qualifications"
+     },
+     "engine_requirement": {
+      "type": "string",
+      "enum": [
+       "ANY",
+       "SINGLE",
+       "TWIN",
+       "MIN_2"
+      ],
+      "title": "Engine Requirement"
+     },
+     "same_type_required": {
+      "type": "boolean",
+      "title": "Same Type Required"
+     },
+     "priority": {
+      "type": "integer",
+      "title": "Priority"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "force_include": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Force Include"
+     },
+     "force_exclude": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Force Exclude"
+     },
+     "overrides": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Overrides"
+     },
+     "created_by": {
+      "type": "integer",
+      "title": "Created By"
+     },
+     "created_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Created At"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     },
+     "latest_run_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latest Run Id"
+     },
+     "assignments": {
+      "items": {
+       "$ref": "#/components/schemas/AssignmentOut"
+      },
+      "type": "array",
+      "title": "Assignments"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "name",
+     "mission_type",
+     "status",
+     "required_aircraft_count",
+     "start_at",
+     "end_at",
+     "est_duration_hours",
+     "est_landings",
+     "est_touch_and_goes",
+     "est_engine_starts",
+     "departure_base_code",
+     "required_qualifications",
+     "engine_requirement",
+     "same_type_required",
+     "priority",
+     "notes",
+     "force_include",
+     "force_exclude",
+     "overrides",
+     "created_by",
+     "created_at",
+     "updated_at",
+     "latest_run_id",
+     "assignments"
+    ],
+    "title": "MissionOut"
+   },
+   "MissionOverridesIn": {
+    "properties": {
+     "duration_buffer_pct": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duration Buffer Pct"
+     },
+     "calendar_buffer_hours": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 72.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Calendar Buffer Hours"
+     },
+     "landing_buffer": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 10.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Landing Buffer"
+     },
+     "weights_preset": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "BALANCED",
+         "MAX_SAFETY",
+         "MAX_AVAILABILITY"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Weights Preset"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "MissionOverridesIn"
+   },
+   "ModelOut": {
+    "properties": {
+     "model_name": {
+      "type": "string",
+      "title": "Model Name"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "trained_at": {
+      "type": "string",
+      "title": "Trained At"
+     },
+     "metrics": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Metrics"
+     }
+    },
+    "type": "object",
+    "required": [
+     "model_name",
+     "version",
+     "status",
+     "trained_at",
+     "metrics"
+    ],
+    "title": "ModelOut"
+   },
+   "ModelShapeOut": {
+    "properties": {
+     "model_shape": {
+      "type": "string",
+      "title": "Model Shape"
+     },
+     "engine_count": {
+      "type": "integer",
+      "title": "Engine Count"
+     },
+     "zones": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Zones"
+     }
+    },
+    "type": "object",
+    "required": [
+     "model_shape",
+     "engine_count",
+     "zones"
+    ],
+    "title": "ModelShapeOut"
+   },
+   "NextDueOut": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "due_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due At"
+     },
+     "remaining": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "code",
+     "unit",
+     "due_at",
+     "remaining",
+     "status"
+    ],
+    "title": "NextDueOut"
+   },
+   "OptimizationRunOut": {
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "title": "Run Id"
+     },
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "requested_at": {
+      "type": "string",
+      "title": "Requested At"
+     },
+     "clock_now": {
+      "type": "string",
+      "title": "Clock Now"
+     },
+     "solver_status": {
+      "type": "string",
+      "enum": [
+       "OPTIMAL",
+       "FEASIBLE",
+       "INFEASIBLE",
+       "SKIPPED"
+      ],
+      "title": "Solver Status"
+     },
+     "duration_ms": {
+      "type": "integer",
+      "title": "Duration Ms"
+     },
+     "weights_preset": {
+      "type": "string",
+      "title": "Weights Preset"
+     },
+     "model_versions": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Model Versions"
+     },
+     "required": {
+      "type": "integer",
+      "title": "Required"
+     },
+     "n_aircraft": {
+      "type": "integer",
+      "title": "N Aircraft"
+     },
+     "n_eligible": {
+      "type": "integer",
+      "title": "N Eligible"
+     },
+     "shortfall": {
+      "type": "integer",
+      "title": "Shortfall"
+     },
+     "sets": {
+      "items": {
+       "$ref": "#/components/schemas/SetOut"
+      },
+      "type": "array",
+      "title": "Sets"
+     },
+     "candidates": {
+      "items": {
+       "$ref": "#/components/schemas/CandidateOut"
+      },
+      "type": "array",
+      "title": "Candidates"
+     },
+     "nearest_to_eligible": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Nearest To Eligible"
+     },
+     "run_warnings": {
+      "items": {
+       "$ref": "#/components/schemas/ReasonOut"
+      },
+      "type": "array",
+      "title": "Run Warnings"
+     },
+     "policy": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Policy"
+     }
+    },
+    "type": "object",
+    "required": [
+     "run_id",
+     "mission_id",
+     "requested_at",
+     "clock_now",
+     "solver_status",
+     "duration_ms",
+     "weights_preset",
+     "model_versions",
+     "required",
+     "n_aircraft",
+     "n_eligible",
+     "shortfall",
+     "sets",
+     "candidates",
+     "nearest_to_eligible",
+     "run_warnings",
+     "policy"
+    ],
+    "title": "OptimizationRunOut"
+   },
+   "OptimizeIn": {
+    "properties": {
+     "weights_preset": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "BALANCED",
+         "MAX_SAFETY",
+         "MAX_AVAILABILITY"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Weights Preset"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "OptimizeIn"
+   },
+   "Page_AircraftSummaryOut_": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/AircraftSummaryOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "page_size": {
+      "type": "integer",
+      "title": "Page Size"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "page",
+     "page_size"
+    ],
+    "title": "Page[AircraftSummaryOut]"
+   },
+   "Page_AuditOut_": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/AuditOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "page_size": {
+      "type": "integer",
+      "title": "Page Size"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "page",
+     "page_size"
+    ],
+    "title": "Page[AuditOut]"
+   },
+   "Page_MissionOut_": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/MissionOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "page_size": {
+      "type": "integer",
+      "title": "Page Size"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "page",
+     "page_size"
+    ],
+    "title": "Page[MissionOut]"
+   },
+   "PermitOut": {
+    "properties": {
+     "permit_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Permit Id"
+     },
+     "permit_type_code": {
+      "type": "string",
+      "title": "Permit Type Code"
+     },
+     "permit_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Permit Number"
+     },
+     "issued_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued At"
+     },
+     "expires_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expires At"
+     },
+     "restrictions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Restrictions"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     },
+     "remaining_days": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining Days"
+     }
+    },
+    "type": "object",
+    "required": [
+     "permit_id",
+     "permit_type_code",
+     "permit_number",
+     "issued_at",
+     "expires_at",
+     "restrictions",
+     "status",
+     "remaining_days"
+    ],
+    "title": "PermitOut"
+   },
+   "PolicyUpdateIn": {
+    "properties": {
+     "duration_buffer_pct": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duration Buffer Pct"
+     },
+     "min_duration_buffer_hours": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 5.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min Duration Buffer Hours"
+     },
+     "calendar_buffer_hours": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 72.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Calendar Buffer Hours"
+     },
+     "landing_buffer": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 10.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Landing Buffer"
+     },
+     "turnaround_hours": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 24.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Turnaround Hours"
+     },
+     "idle_policy": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "EXCLUDE",
+         "WARN"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idle Policy"
+     },
+     "expiring_soon_days": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expiring Soon Days"
+     },
+     "expiring_soon_pct": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 50.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expiring Soon Pct"
+     },
+     "expiring_soon_fh": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expiring Soon Fh"
+     },
+     "expiring_soon_ldg": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 200.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expiring Soon Ldg"
+     },
+     "low_margin_pct": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 50.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Low Margin Pct"
+     },
+     "max_staleness_hours": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 168.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Staleness Hours"
+     },
+     "risk_high_threshold": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk High Threshold"
+     },
+     "weights_preset": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "BALANCED",
+         "MAX_SAFETY",
+         "MAX_AVAILABILITY"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Weights Preset"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PolicyUpdateIn"
+   },
+   "ProjectionOut": {
+    "properties": {
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "ref": {
+      "type": "string",
+      "title": "Ref"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "interval": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Interval"
+     },
+     "remaining_now": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining Now"
+     },
+     "consumption": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Consumption"
+     },
+     "remaining_after": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining After"
+     },
+     "due_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due At"
+     },
+     "outcome": {
+      "type": "string",
+      "enum": [
+       "OK",
+       "EXPIRED",
+       "DUE_BEFORE_END",
+       "MISSING"
+      ],
+      "title": "Outcome"
+     }
+    },
+    "type": "object",
+    "required": [
+     "source",
+     "ref",
+     "unit",
+     "interval",
+     "remaining_now",
+     "consumption",
+     "remaining_after",
+     "due_at",
+     "outcome"
+    ],
+    "title": "ProjectionOut"
+   },
+   "QualificationOut": {
+    "properties": {
+     "qualification_code": {
+      "type": "string",
+      "title": "Qualification Code"
+     },
+     "valid_to": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valid To"
+     },
+     "effective": {
+      "type": "boolean",
+      "title": "Effective"
+     },
+     "revoked_by": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RevokedByOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "qualification_code",
+     "valid_to",
+     "effective",
+     "revoked_by",
+     "status"
+    ],
+    "title": "QualificationOut"
+   },
+   "ReadyOut": {
+    "properties": {
+     "db": {
+      "type": "string",
+      "title": "Db"
+     },
+     "data_source": {
+      "type": "string",
+      "title": "Data Source"
+     },
+     "models": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Models"
+     }
+    },
+    "type": "object",
+    "required": [
+     "db",
+     "data_source",
+     "models"
+    ],
+    "title": "ReadyOut"
+   },
+   "ReasonOut": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "params": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        },
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Params"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code"
+    ],
+    "title": "ReasonOut"
+   },
+   "ReferenceOut": {
+    "properties": {
+     "aircraft_types": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Aircraft Types"
+     },
+     "bases": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Bases"
+     },
+     "qualifications": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Qualifications"
+     },
+     "activity_units": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Activity Units"
+     },
+     "inspection_types": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Inspection Types"
+     },
+     "permit_types": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Permit Types"
+     },
+     "zones": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Zones"
+     },
+     "restrictions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Restrictions"
+     },
+     "weight_presets": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "type": "number"
+       },
+       "type": "object"
+      },
+      "type": "object",
+      "title": "Weight Presets"
+     },
+     "mission_types": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Mission Types"
+     },
+     "engine_requirements": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Engine Requirements"
+     },
+     "codes": {
+      "$ref": "#/components/schemas/CodeList"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_types",
+     "bases",
+     "qualifications",
+     "activity_units",
+     "inspection_types",
+     "permit_types",
+     "zones",
+     "restrictions",
+     "weight_presets",
+     "mission_types",
+     "engine_requirements",
+     "codes"
+    ],
+    "title": "ReferenceOut"
+   },
+   "RevokedByOut": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "MA",
+       "PERMIT"
+      ],
+      "title": "Kind"
+     },
+     "ref": {
+      "type": "string",
+      "title": "Ref"
+     },
+     "restriction": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Restriction"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "ref"
+    ],
+    "title": "RevokedByOut"
+   },
+   "RiskFactorOut": {
+    "properties": {
+     "feature_code": {
+      "type": "string",
+      "title": "Feature Code"
+     },
+     "direction": {
+      "type": "string",
+      "enum": [
+       "HIGH",
+       "LOW"
+      ],
+      "title": "Direction"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feature_code",
+     "direction"
+    ],
+    "title": "RiskFactorOut"
+   },
+   "RiskOut": {
+    "properties": {
+     "probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Probability"
+     },
+     "band": {
+      "type": "string",
+      "enum": [
+       "LOW",
+       "MEDIUM",
+       "HIGH",
+       "UNAVAILABLE"
+      ],
+      "title": "Band"
+     },
+     "model_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Version"
+     },
+     "top_factors": {
+      "items": {
+       "$ref": "#/components/schemas/RiskFactorOut"
+      },
+      "type": "array",
+      "title": "Top Factors"
+     }
+    },
+    "type": "object",
+    "required": [
+     "probability",
+     "band",
+     "model_version",
+     "top_factors"
+    ],
+    "title": "RiskOut"
+   },
+   "RunSummaryOut": {
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "title": "Run Id"
+     },
+     "requested_at": {
+      "type": "string",
+      "title": "Requested At"
+     },
+     "solver_status": {
+      "type": "string",
+      "title": "Solver Status"
+     },
+     "n_eligible": {
+      "type": "integer",
+      "title": "N Eligible"
+     },
+     "shortfall": {
+      "type": "integer",
+      "title": "Shortfall"
+     },
+     "duration_ms": {
+      "type": "integer",
+      "title": "Duration Ms"
+     }
+    },
+    "type": "object",
+    "required": [
+     "run_id",
+     "requested_at",
+     "solver_status",
+     "n_eligible",
+     "shortfall",
+     "duration_ms"
+    ],
+    "title": "RunSummaryOut"
+   },
+   "SetOut": {
+    "properties": {
+     "set_index": {
+      "type": "integer",
+      "title": "Set Index"
+     },
+     "objective": {
+      "type": "number",
+      "title": "Objective"
+     },
+     "aircraft_ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Aircraft Ids"
+     },
+     "tail_numbers": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tail Numbers"
+     }
+    },
+    "type": "object",
+    "required": [
+     "set_index",
+     "objective",
+     "aircraft_ids",
+     "tail_numbers"
+    ],
+    "title": "SetOut"
+   },
+   "SourceFreshnessOut": {
+    "properties": {
+     "source_name": {
+      "type": "string",
+      "title": "Source Name"
+     },
+     "loaded_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Loaded At"
+     },
+     "is_stale": {
+      "type": "boolean",
+      "title": "Is Stale"
+     }
+    },
+    "type": "object",
+    "required": [
+     "source_name",
+     "loaded_at",
+     "is_stale"
+    ],
+    "title": "SourceFreshnessOut"
+   },
+   "TermOut": {
+    "properties": {
+     "value": {
+      "type": "number",
+      "title": "Value"
+     },
+     "weight": {
+      "type": "number",
+      "title": "Weight"
+     },
+     "contribution": {
+      "type": "number",
+      "title": "Contribution"
+     }
+    },
+    "type": "object",
+    "required": [
+     "value",
+     "weight",
+     "contribution"
+    ],
+    "title": "TermOut"
+   },
+   "TimelineItemOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "ref": {
+      "type": "string",
+      "title": "Ref"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Status"
+     },
+     "date": {
+      "type": "string",
+      "title": "Date"
+     },
+     "predicted": {
+      "type": "boolean",
+      "title": "Predicted"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "source",
+     "ref",
+     "unit",
+     "status",
+     "date",
+     "predicted"
+    ],
+    "title": "TimelineItemOut"
+   },
+   "TypeCountOut": {
+    "properties": {
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "available": {
+      "type": "integer",
+      "title": "Available"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type_code",
+     "total",
+     "available"
+    ],
+    "title": "TypeCountOut"
+   },
+   "UserOut": {
+    "properties": {
+     "user_id": {
+      "type": "integer",
+      "title": "User Id"
+     },
+     "username": {
+      "type": "string",
+      "title": "Username"
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name"
+     },
+     "role": {
+      "type": "string",
+      "title": "Role"
+     }
+    },
+    "type": "object",
+    "required": [
+     "user_id",
+     "username",
+     "display_name",
+     "role"
+    ],
+    "title": "UserOut"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}
