@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Generic, Literal, TypeVar
+from typing import Annotated, Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -113,6 +113,7 @@ class PolicyUpdateIn(In):
     landing_buffer: int | None = Field(default=None, ge=0, le=10)
     turnaround_hours: float | None = Field(default=None, ge=0, le=24)
     idle_policy: Literal["EXCLUDE", "WARN"] | None = None
+    tolerance_policy: Literal["WARN", "NEVER"] | None = None
     expiring_soon_days: float | None = Field(default=None, ge=0, le=90)
     expiring_soon_pct: float | None = Field(default=None, ge=0, le=50)
     expiring_soon_fh: float | None = Field(default=None, ge=0, le=100)
@@ -123,6 +124,23 @@ class PolicyUpdateIn(In):
     weights_preset: PresetLit | None = None
 
 
+TermLit = Literal["risk", "best_fit", "balance", "capacity", "base_match", "warnings"]
+
+
+Weight = Annotated[float, Field(ge=0, le=100, allow_inf_nan=False)]
+
+
+class WeightsIn(In):
+    presets: dict[PresetLit, dict[TermLit, Weight]] = Field(min_length=1)
+
+
+class TgWeightIn(In):
+    type_code: str = Field(min_length=1, max_length=16)
+    inspection_type_code: str = Field(min_length=1, max_length=24)
+    unit: Literal["LDG", "CYC"]
+    tg_weight: float | None = Field(default=None, ge=0, le=5, allow_inf_nan=False)  # None ⇒ remove the override
+
+
 class HangarCapacityIn(In):
     base_code: str = Field(min_length=1, max_length=8)
     iso_week: str = Field(pattern=r"^\d{4}-W\d{2}$")
@@ -130,6 +148,19 @@ class HangarCapacityIn(In):
 
 
 # ───────── responses ─────────
+class WeightsOut(Out):
+    presets: dict[str, dict[str, float]]
+
+
+class TgWeightOut(Out):
+    type_code: str
+    inspection_type_code: str
+    unit: str
+    reference_tg_weight: float
+    override_tg_weight: float | None
+    effective_tg_weight: float
+
+
 class UserOut(Out):
     user_id: int
     username: str

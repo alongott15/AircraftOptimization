@@ -91,6 +91,10 @@ def _f(value: Any) -> float | None:
     return number if math.isfinite(number) else None
 
 
+def _nonneg(value: float | None) -> float | None:
+    return value if value is not None and value >= 0 else None
+
+
 def _req_f(value: Any) -> float:
     number = _f(value)
     if number is None:
@@ -346,9 +350,10 @@ class SqlViewSource:
                 {
                     "type_code": r["type_code"],
                     "unit": r["unit_code"],
-                    "interval": float(r["interval_value"]),
-                    "tolerance": float(r["tolerance_value"] or 0),
-                    "tg_weight": float(r["tg_weight"]),
+                    "interval": _f(r["interval_value"]),
+                    "tolerance": _f(r["tolerance_value"]) or 0.0,
+                    # same rule as the snapshot: NULL ⇒ 1.0; NaN/inf/negative ⇒ unreadable (None)
+                    "tg_weight": 1.0 if r["tg_weight"] is None else _nonneg(_f(r["tg_weight"])),
                 }
             )
         return {

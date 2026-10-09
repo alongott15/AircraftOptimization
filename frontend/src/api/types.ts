@@ -31,6 +31,9 @@ export type AuditPage = S['Page_AuditOut_'];
 export type HangarCapacity = S['HangarCapacityOut'];
 export type HorizonPlan = S['HorizonPlanOut'];
 export type HorizonMission = S['HorizonMissionOut'];
+export type Weights = S['WeightsOut'];
+export type TgWeight = S['TgWeightOut'];
+export type TgWeightInput = S['TgWeightIn'];
 export type ComplianceStatus = AircraftSummary['compliance_status'];
 
 export interface Policy {
@@ -40,7 +43,7 @@ export interface Policy {
   landing_buffer: number;
   turnaround_hours: number;
   idle_policy: 'EXCLUDE' | 'WARN';
-  tolerance_policy: string;
+  tolerance_policy: 'WARN' | 'NEVER';
   expiring_soon_days: number;
   expiring_soon_pct: number;
   expiring_soon_fh: number;

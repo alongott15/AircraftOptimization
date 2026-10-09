@@ -110,6 +110,8 @@ def _sanitize(item: Item) -> Item:
     """A limit whose numbers are NaN/inf is unknown, never OK (S1)."""
     if item.is_missing or item.kind == ItemKind.CALENDAR:
         return item
+    if item.kind == ItemKind.COUNTER and not (_finite(item.tg_weight) and item.tg_weight >= 0):
+        return replace(item, missing_kind=_MISSING_KIND.get(item.source, "INSPECTION"), missing_code=item.ref)
     if item.kind == ItemKind.COUNTER and not _finite(item.current):
         return replace(item, missing_kind="COUNTER", missing_code=str(item.unit))
     if not _finite(item.due_value) or (item.kind == ItemKind.IDLE and not _finite(item.current)):
@@ -150,8 +152,10 @@ def _inspection_items(ac: Aircraft, ctx: EvaluationContext) -> list[Item]:
                             missing_kind="INSPECTION_LIMIT", missing_code=d.inspection_type_code))
     for lim in sorted(limits, key=lambda x: (x.inspection_type_code, x.unit)):
         code = lim.inspection_type_code
+        # Item.tg_weight weights *planned* TGs; the current value below always uses the lake weight, because the
+        # lake's due_value is expressed in that weighted space (an override must never rewrite the flown history).
         base = Item(source=ItemSource.INSPECTION, ref=code, unit=lim.unit, kind=ItemKind.COUNTER,
-                    interval=lim.interval_value, tolerance=lim.tolerance_value, tg_weight=lim.tg_weight,
+                    interval=lim.interval_value, tolerance=lim.tolerance_value, tg_weight=lim.planning_tg_weight,
                     zone_code=lim.zone_code)
         if lim.unit == Unit.IDLE_DAY:
             if ac.last_flight_at is None:

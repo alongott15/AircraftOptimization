@@ -445,3 +445,69 @@ def test_data_issues_make_aircraft_unavailable_with_visible_items() -> None:
     st = aircraft_status(ac, P, ctx())
     assert not st.available
     assert any(i.missing_kind == "MAINTENANCE_ACTION" and i.status == ComplianceStatus.UNKNOWN for i in st.items)
+
+
+def test_tolerance_policy_never_hides_the_tolerance_hint_and_never_grants_eligibility() -> None:
+    ac = an_aircraft().remaining("I100H", Unit.FH, 4.0, tolerance=10.0).build()
+    m = a_mission(duration_hours=4.0)
+    warn = evaluate_eligibility(ac, m, P, ctx())
+    never = evaluate_eligibility(ac, m, replace(P, tolerance_policy="NEVER"), ctx())
+    assert not warn.eligible and not never.eligible
+    assert "TOLERANCE_AVAILABLE" in {str(w.code) for w in warn.warnings}
+    assert "TOLERANCE_AVAILABLE" not in {str(w.code) for w in never.warnings}
+    assert PlanningPolicy(tolerance_policy="WARN_ONLY").tolerance_policy == "WARN"  # value from older seeds
+
+
+def test_weights_are_normalized_and_validated() -> None:
+    from app.domain.policy import normalize_weights
+
+    w = normalize_weights({"risk": 2, "best_fit": 2, "balance": 0, "capacity": 0, "base_match": 0, "warnings": 0})
+    assert w["risk"] == 0.5 and sum(w.values()) == pytest.approx(1.0)
+    with pytest.raises(ValueError, match="exactly the score terms"):
+        normalize_weights({"risk": 1})
+    with pytest.raises(ValueError, match="at least one weight"):
+        normalize_weights(dict.fromkeys(w, 0))
+
+
+
+# ── touch-and-go override semantics (safety review 2026-10-09, third pass) ──
+def _lg_with_override(remaining: float, override: float | None):  # type: ignore[no-untyped-def]
+    ac = an_aircraft().remaining("LG_INSP", Unit.LDG, remaining, interval=300).build()
+    limits = tuple(replace(lim, projection_tg_weight=override) if lim.inspection_type_code == "LG_INSP" else lim
+                   for lim in ac.inspection_limits)
+    return replace(ac, inspection_limits=limits)
+
+
+@pytest.mark.parametrize("override", [None, 0.0, 0.5, 1.0, 2.0, 5.0])
+def test_tg_override_never_rewrites_flown_history(override: float | None) -> None:
+    m = a_mission(landings=1, touch_and_goes=6)
+    r = evaluate_eligibility(_lg_with_override(5.0, override), m, P, ctx())
+    lg = next(p for p in r.projections if p.ref == "LG_INSP")
+    assert lg.remaining_now == pytest.approx(5.0)
+    overdue = evaluate_eligibility(_lg_with_override(-20.0, override), m, P, ctx())
+    assert not overdue.eligible and "INSPECTION_EXPIRED" in codes(overdue)
+
+
+def test_tg_planning_weight_scales_only_planned_touch_and_goes() -> None:
+    m = a_mission(landings=1, touch_and_goes=6)
+    r = evaluate_eligibility(_lg_with_override(10.0, 2.0), m, P, ctx())
+    assert reason(r, "INSPECTION_DUE_BEFORE_MISSION_END").params["required"] == pytest.approx(1 + 1 + 6 * 2.0)
+
+
+@pytest.mark.parametrize("bad", [math.nan, math.inf, -1.0])
+def test_unreadable_tg_planning_weight_is_missing(bad: float) -> None:
+    r = evaluate_eligibility(_lg_with_override(50.0, bad), a_mission(touch_and_goes=10), P, ctx())
+    assert not r.eligible
+    assert {"item_kind": "INSPECTION", "item_code": "LG_INSP"} in _params(r, "DATA_MISSING")
+
+
+def test_context_applies_overrides_conservatively_and_flags_bad_values() -> None:
+    from app.services.context import _with_tg_overrides
+
+    ac = an_aircraft().remaining("LG_INSP", Unit.LDG, 50.0, interval=300).build()
+    key = (ac.aircraft_type.type_code, "LG_INSP", "LDG")
+    lg = lambda a: next(x for x in a.inspection_limits if x.inspection_type_code == "LG_INSP")  # noqa: E731
+    assert lg(_with_tg_overrides(ac, {key: 3.0})).planning_tg_weight == 3.0
+    assert lg(_with_tg_overrides(ac, {key: 0.2})).planning_tg_weight == 1.0  # never below the lake weight
+    flagged = _with_tg_overrides(ac, {key: math.nan})
+    assert ("INSPECTION_LIMIT", "LG_INSP") in flagged.data_issues

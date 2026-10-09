@@ -585,6 +585,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Weights */
+        get: operations["get_weights_api_v1_settings_weights_get"];
+        /** Put Weights */
+        put: operations["put_weights_api_v1_settings_weights_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/tg-weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Tg Weights */
+        get: operations["get_tg_weights_api_v1_settings_tg_weights_get"];
+        /** Put Tg Weights */
+        put: operations["put_tg_weights_api_v1_settings_tg_weights_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/hangar-capacity": {
         parameters: {
             query?: never;
@@ -1410,6 +1446,8 @@ export interface components {
             turnaround_hours?: number | null;
             /** Idle Policy */
             idle_policy?: ("EXCLUDE" | "WARN") | null;
+            /** Tolerance Policy */
+            tolerance_policy?: ("WARN" | "NEVER") | null;
             /** Expiring Soon Days */
             expiring_soon_days?: number | null;
             /** Expiring Soon Pct */
@@ -1610,6 +1648,35 @@ export interface components {
             /** Contribution */
             contribution: number;
         };
+        /** TgWeightIn */
+        TgWeightIn: {
+            /** Type Code */
+            type_code: string;
+            /** Inspection Type Code */
+            inspection_type_code: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "LDG" | "CYC";
+            /** Tg Weight */
+            tg_weight?: number | null;
+        };
+        /** TgWeightOut */
+        TgWeightOut: {
+            /** Type Code */
+            type_code: string;
+            /** Inspection Type Code */
+            inspection_type_code: string;
+            /** Unit */
+            unit: string;
+            /** Reference Tg Weight */
+            reference_tg_weight: number;
+            /** Override Tg Weight */
+            override_tg_weight: number | null;
+            /** Effective Tg Weight */
+            effective_tg_weight: number;
+        };
         /** TimelineItemOut */
         TimelineItemOut: {
             /** Aircraft Id */
@@ -1664,6 +1731,24 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WeightsIn */
+        WeightsIn: {
+            /** Presets */
+            presets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /** WeightsOut */
+        WeightsOut: {
+            /** Presets */
+            presets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
         };
     };
     responses: never;
@@ -2740,6 +2825,112 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_weights_api_v1_settings_weights_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeightsOut"];
+                };
+            };
+        };
+    };
+    put_weights_api_v1_settings_weights_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeightsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeightsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tg_weights_api_v1_settings_tg_weights_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TgWeightOut"][];
+                };
+            };
+        };
+    };
+    put_tg_weights_api_v1_settings_tg_weights_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TgWeightIn"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TgWeightOut"][];
                 };
             };
             /** @description Validation Error */

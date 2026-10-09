@@ -42,8 +42,12 @@ from app.api.schemas import (
     RiskOut,
     RunSummaryOut,
     SourceFreshnessOut,
+    TgWeightIn,
+    TgWeightOut,
     TimelineItemOut,
     UserOut,
+    WeightsIn,
+    WeightsOut,
 )
 from app.domain.models import EngineRequirement, MissionRequest, MissionType
 from app.security.auth import (
@@ -186,8 +190,8 @@ def me(user: UserDep) -> dict[str, Any]:
 
 # ── reference ──────────────────────────────────────────────────────────
 @router.get("/reference", response_model=ReferenceOut, tags=["reference"])
-def reference(_: Viewer, c: ContainerDep) -> dict[str, Any]:
-    return admin.reference(c)
+def reference(_: Viewer, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
+    return admin.reference(c, s)
 
 
 # ── fleet ──────────────────────────────────────────────────────────────
@@ -437,6 +441,37 @@ def put_policy(body: PolicyUpdateIn, request: Request, user: Admin, c: Container
     _audit(request, s, c, user.user_id, "POLICY_UPDATE", "planning_policy", None,
            {"before": {k: before[k] for k in body.model_dump(exclude_none=True)},
             "after": body.model_dump(exclude_none=True)})
+    return after
+
+
+@router.get("/settings/weights", response_model=WeightsOut, tags=["settings"])
+def get_weights(_: Viewer, s: SessionDep) -> dict[str, Any]:
+    return {"presets": admin.weights(s)}
+
+
+@router.put("/settings/weights", response_model=WeightsOut, tags=["settings"])
+def put_weights(body: WeightsIn, request: Request, user: Admin, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
+    before = admin.weights(s)
+    after = admin.update_weights(s, {str(k): {str(t): w for t, w in v.items()} for k, v in body.presets.items()})
+    _audit(request, s, c, user.user_id, "WEIGHTS_UPDATE", "weight_preset", None,
+           {"before": {k: before[k] for k in body.presets}, "after": {k: after[k] for k in body.presets}})
+    return {"presets": after}
+
+
+@router.get("/settings/tg-weights", response_model=list[TgWeightOut], tags=["settings"])
+def get_tg_weights(_: Viewer, c: ContainerDep, s: SessionDep) -> list[dict[str, Any]]:
+    return admin.tg_weights(c, s)
+
+
+@router.put("/settings/tg-weights", response_model=list[TgWeightOut], tags=["settings"])
+def put_tg_weights(body: list[TgWeightIn], request: Request, user: Admin, c: ContainerDep, s: SessionDep
+                   ) -> list[dict[str, Any]]:
+    before = {(r["type_code"], r["inspection_type_code"], r["unit"]): r["effective_tg_weight"]
+              for r in admin.tg_weights(c, s)}
+    after = admin.update_tg_weights(c, s, [(x.type_code, x.inspection_type_code, x.unit, x.tg_weight) for x in body],
+                                    user.user_id, c.clock.now())
+    _audit(request, s, c, user.user_id, "TG_WEIGHTS_UPDATE", "tg_weight_override", None, {"changes": [
+        {**x.model_dump(), "before": before.get((x.type_code, x.inspection_type_code, x.unit))} for x in body]})
     return after
 
 

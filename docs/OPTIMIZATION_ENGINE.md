@@ -44,7 +44,7 @@ Domain code is pure (no I/O, no clock calls) — inputs are immutable dataclasse
 | `landing_buffer` | 1 | extra landing counted (go-around/diversion) |
 | `turnaround_hours` | 1 | gap required between missions of the same tail |
 | `idle_policy` | `EXCLUDE` | or `WARN` |
-| `tolerance_policy` | `WARN_ONLY` | tolerances never make an aircraft eligible in POC |
+| `tolerance_policy` | `WARN` | `WARN` shows `TOLERANCE_AVAILABLE`, `NEVER` hides it — tolerances never make an aircraft eligible |
 | `expiring_soon_days` | 7 | |
 | `expiring_soon_pct` | 10 | % of interval |
 | `expiring_soon_fh` | 5 | |
@@ -222,6 +222,18 @@ Each term `s_i ∈ [0, 1]`, higher is better. Final `score = 100 × Σ wᵢ sᵢ
 | `BALANCED` — מאוזן | 0.30 | 0.25 | 0.15 | 0.15 | 0.10 | 0.05 |
 | `MAX_SAFETY` — בטיחות מקסימלית | 0.55 | 0.10 | 0.10 | 0.10 | 0.05 | 0.10 |
 | `MAX_AVAILABILITY` — זמינות מקסימלית | 0.15 | 0.35 | 0.20 | 0.20 | 0.05 | 0.05 |
+
+Defaults above; an admin can edit each preset's weights (`PUT /settings/weights`, normalized to sum 1, audited).
+They change only the ranking of eligible aircraft (BR-14).
+
+Touch-and-go weights per LDG/CYC limit (BR-03) can be overridden by an admin (`tg_weight_override`, audited). Unlike
+score weights these **do** affect eligibility, so they are constrained:
+- The override weights **planned and committed** touch-and-goes only. The current value is always
+  `LDG + lake tg_weight × TG`, because the lake's `due_value` is expressed in that weighted space; re-weighting the
+  flown history would invent or erase remaining margin.
+- Effective planning weight = `max(lake weight, override)`: overrides can only make planning more conservative (an
+  override below the lake weight is rejected with 422; a stale one below a later-raised lake weight is ignored).
+- A stored override that is not finite or outside 0–5 makes the limit `DATA_MISSING` (CHECK constraint in the DB too).
 
 Score breakdown (each term value and weighted contribution) is persisted in `optimization_candidate.score_breakdown`
 and returned to the UI.

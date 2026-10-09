@@ -58,6 +58,10 @@ ROUTES = [
     ("GET", "/api/v1/settings/policy", ALL),
     ("PUT", "/api/v1/settings/policy", {"admin"}),
     ("GET", "/api/v1/settings/hangar-capacity", ALL),
+    ("GET", "/api/v1/settings/weights", ALL),
+    ("PUT", "/api/v1/settings/weights", {"admin"}),
+    ("GET", "/api/v1/settings/tg-weights", ALL),
+    ("PUT", "/api/v1/settings/tg-weights", {"admin"}),
     ("PUT", "/api/v1/settings/hangar-capacity", {"admin"}),
     ("GET", "/api/v1/audit", {"maint", "admin"}),
 ]
@@ -66,7 +70,10 @@ PUBLIC = {"/api/v1/health", "/api/v1/ready", "/api/v1/auth/login", "/api/v1/auth
 BODIES = {"/api/v1/missions": M_A, "/api/v1/eligibility/check": {"mission": M_A},
           "/api/v1/settings/policy": {"landing_buffer": 1}, "/api/v1/settings/hangar-capacity": [],
           "/api/v1/missions/1": {"notes": "x"}, "/api/v1/planning/horizon": {},
-          "/api/v1/planning/horizon/apply": {"assignments": []}}
+          "/api/v1/planning/horizon/apply": {"assignments": []},
+          "/api/v1/settings/weights": {"presets": {"BALANCED": {"risk": 0.3, "best_fit": 0.25, "balance": 0.15,
+                                                                "capacity": 0.15, "base_match": 0.1, "warnings": 0.05}}},
+          "/api/v1/settings/tg-weights": []}
 
 
 def test_every_route_is_in_the_matrix(client: TestClient) -> None:
@@ -285,3 +292,73 @@ def test_assigned_mission_that_lost_eligibility_is_alerted(client: TestClient) -
     alerts = client.get("/api/v1/fleet/alerts", headers=headers).json()
     assert {"tail_number": "4X-S03", "source": "ASSIGNMENT", "ref": M_A["name"], "status": "EXPIRED"}.items() <= next(
         a for a in alerts if a["source"] == "ASSIGNMENT").items()
+
+
+# ── settings: scoring weights (FR-45), touch-and-go weights (FR-60) ─────
+BALANCED = {"risk": 3, "best_fit": 2.5, "balance": 1.5, "capacity": 1.5, "base_match": 1, "warnings": 0.5}
+
+
+def test_admin_edits_preset_weights_normalized_and_audited(client: TestClient) -> None:
+    headers = login(client, "admin")
+    r = client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": BALANCED}}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["presets"]["BALANCED"] == pytest.approx(
+        {"risk": 0.3, "best_fit": 0.25, "balance": 0.15, "capacity": 0.15, "base_match": 0.1, "warnings": 0.05})
+    bad = client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": {**BALANCED, "risk": -1}}},
+                     headers=headers)
+    assert bad.status_code == 422
+    missing = client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": {"risk": 1}}}, headers=headers)
+    assert missing.status_code == 422
+    nan = client.put("/api/v1/settings/weights", content='{"presets": {"BALANCED": {"risk": NaN, "best_fit": 1, '
+                     '"balance": 1, "capacity": 1, "base_match": 1, "warnings": 1}}}',
+                     headers={**headers, "Content-Type": "application/json"})
+    assert nan.status_code == 422
+    actions = {a["action"] for a in client.get("/api/v1/audit", headers=headers).json()["items"]}
+    assert "WEIGHTS_UPDATE" in actions
+
+
+def test_preset_weights_drive_the_score(client: TestClient) -> None:
+    headers = login(client, "admin")
+    only_risk = {**dict.fromkeys(BALANCED, 0), "risk": 1}
+    client.put("/api/v1/settings/weights", json={"presets": {"BALANCED": only_risk}}, headers=headers)
+    planner = login(client, "planner")
+    mid = client.post("/api/v1/missions", json=M_A, headers=planner).json()["mission_id"]
+    run = client.post(f"/api/v1/missions/{mid}/optimize", json={}, headers=planner).json()
+    scored = [c for c in run["candidates"] if c["eligible"] and c["score_breakdown"]]
+    assert scored and all(set(c["score_breakdown"]) >= {"risk"} for c in scored)
+    for c in scored:
+        weighted = {k: v["weight"] for k, v in c["score_breakdown"].items()}
+        assert weighted["risk"] == pytest.approx(1.0) and weighted["best_fit"] == pytest.approx(0.0)
+
+
+def test_tg_weight_override_changes_eligibility_and_is_audited(client: TestClient) -> None:
+    headers = login(client, "admin")
+    type_code = client.get("/api/v1/aircraft/4X-S05", headers=headers).json()["type_code"]
+    rows = client.get("/api/v1/settings/tg-weights", headers=headers).json()
+    lg = next(r for r in rows if r["type_code"] == type_code and r["inspection_type_code"] == "LG_INSP")
+    assert lg["override_tg_weight"] is None and lg["effective_tg_weight"] == lg["reference_tg_weight"]
+
+    def lg_reason() -> dict[str, object]:
+        cand = client.post("/api/v1/eligibility/check", json={"mission": M_A, "tail_numbers": ["4X-S05"]},
+                           headers=headers).json()[0]
+        return next(x["params"] for x in cand["reasons"] if x["params"].get("inspection_code") == "LG_INSP")
+
+    before = lg_reason()  # SC-04: 5 weighted landings left; 1 landing + 1 buffer + 6 TG × 1.0 = 8
+    assert before["remaining"] == 5.0 and before["required"] == 8.0
+    body = [{"type_code": type_code, "inspection_type_code": "LG_INSP", "unit": lg["unit"], "tg_weight": 2.0}]
+    updated = client.put("/api/v1/settings/tg-weights", json=body, headers=headers)
+    assert updated.status_code == 200, updated.text
+    assert next(r for r in updated.json() if r["inspection_type_code"] == "LG_INSP"
+                and r["type_code"] == type_code)["effective_tg_weight"] == 2.0
+    after = lg_reason()
+    assert after["remaining"] == 5.0  # the flown history is never re-weighted (lake due_value space)
+    assert after["required"] == 14.0  # only the planned TGs use the override: 1 + 1 + 6 × 2.0
+    lower = client.put("/api/v1/settings/tg-weights", json=[{**body[0], "tg_weight": 0}], headers=headers)
+    assert lower.status_code == 422 and lower.json()["errors"][0]["code"] == "VALUE_TOO_SMALL"
+    client.put("/api/v1/settings/tg-weights", json=[{**body[0], "tg_weight": None}], headers=headers)
+    assert lg_reason()["required"] == 8.0  # removing the override restores the reference weight
+    unknown = client.put("/api/v1/settings/tg-weights", json=[{**body[0], "inspection_type_code": "NOPE"}],
+                         headers=headers)
+    assert unknown.status_code == 422
+    audit = client.get("/api/v1/audit", headers=headers, params={"action": "TG_WEIGHTS_UPDATE"}).json()["items"]
+    assert any(a["details"]["changes"][0]["before"] == lg["reference_tg_weight"] for a in audit)

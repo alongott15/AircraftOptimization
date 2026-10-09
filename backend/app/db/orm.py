@@ -13,6 +13,7 @@ from sqlalchemy import (
     DDL,
     TIMESTAMP,
     Boolean,
+    CheckConstraint,
     Date,
     Float,
     ForeignKey,
@@ -281,6 +282,19 @@ class WeightPresetRow(AppBase):
     __tablename__ = "weight_preset"
     preset_code: Mapped[str] = mapped_column(String(24), primary_key=True)
     weights_json: Mapped[str] = mapped_column(Text)
+
+
+class TgWeightOverrideRow(AppBase):
+    """Admin override of a limit's touch-and-go weight (FR-60). Fleet reference data stays read-only in the lake."""
+
+    __tablename__ = "tg_weight_override"
+    __table_args__ = (CheckConstraint("tg_weight >= 0 AND tg_weight <= 5", name="ck_tg_weight_override_range"),)
+    type_code: Mapped[str] = mapped_column(String(16), primary_key=True)
+    inspection_type_code: Mapped[str] = mapped_column(String(24), primary_key=True)
+    unit_code: Mapped[str] = mapped_column(String(16), primary_key=True)
+    tg_weight: Mapped[float] = mapped_column(Float)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.user_id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
 class HangarCapacityRow(AppBase):

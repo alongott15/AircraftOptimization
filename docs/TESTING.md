@@ -180,7 +180,7 @@ Backend (`backend/tests/`): `test_compliance_unit`, `test_property` (P1–P4, P6
 `test_api` (authz matrix, CSRF, validation, assignment safety, reason-code contract with `reasonCodes.ts`),
 `test_ml`, `test_horizon`, `test_oidc` (mocked IdP), `test_vertica_contract` (views on SQLite + real Vertica when
 `APP_VERTICA_DSN` is set; dirty-lake rows: NULL/NaN/unknown values must fail safe), `test_migrations` (no ORM/migration
-drift, downgrade clean), `test_openapi_snapshot`. `test_api` keeps a route-coverage check: every authenticated route must
+drift, downgrade clean), `test_openapi_snapshot`, `test_manage` (user CLI: hidden password, validation, audit). `test_api` keeps a route-coverage check: every authenticated route must
 appear in the authz matrix. Compliance regression tests cover the 2026-10-09 safety review (commitments since snapshot,
 per-flight buffers, later assignments, NaN, programme gaps, undated permits, missing feeds, stale counters).
 Frontend: Vitest (`i18n`, `components`, `zones`), Playwright `e2e/demo.spec.ts` (8 flows incl. edit, horizon, apron).

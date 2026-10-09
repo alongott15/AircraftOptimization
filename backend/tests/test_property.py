@@ -14,7 +14,7 @@ from app.domain.compliance.status import aircraft_status
 from app.domain.models import STATUS_SEVERITY, ComplianceStatus, Unit
 from app.domain.optimization.cpsat_selector import SelectionCandidate, select
 from app.domain.optimization.scoring import ScoringInputs, score_candidate
-from app.domain.policy import WEIGHT_PRESETS, PlanningPolicy
+from app.domain.policy import SCORE_TERMS, WEIGHT_PRESETS, PlanningPolicy, normalize_weights
 from tests.builders import T0, a_mission, an_aircraft, ctx
 
 P = PlanningPolicy()
@@ -54,12 +54,21 @@ def test_p2_removing_data_never_helps(rfh, rldg, pdays, unit) -> None:  # type: 
         assert not partial.eligible
 
 
+admin_weights = st.lists(st.floats(min_value=0, max_value=10), min_size=6, max_size=6).filter(lambda w: sum(w) > 0)
+
+
 @settings(max_examples=60, deadline=None)
 @given(st.lists(st.tuples(remaining_fh, remaining_ldg, permit_days), min_size=2, max_size=8),
        st.lists(st.floats(min_value=0, max_value=1), min_size=8, max_size=8),
-       st.sampled_from(sorted(WEIGHT_PRESETS)), st.integers(min_value=1, max_value=4))
-def test_p3_p7_ml_and_weights_never_change_eligibility_and_selection_is_subset(specs, probs, preset, n) -> None:  # type: ignore[no-untyped-def]
-    policy = P.with_overrides({"weights_preset": preset})
+       st.sampled_from(sorted(WEIGHT_PRESETS)), st.integers(min_value=1, max_value=4), admin_weights,
+       st.sampled_from(["WARN", "NEVER"]))
+def test_p3_p7_ml_and_weights_never_change_eligibility_and_selection_is_subset(  # type: ignore[no-untyped-def]
+        specs, probs, preset, n, custom, tolerance) -> None:
+    # admin-edited preset weights (FR-45) and the tolerance policy (FR-60) must not change eligibility either
+    edited = {**{k: dict(v) for k, v in WEIGHT_PRESETS.items()},
+              preset: normalize_weights(dict(zip(SCORE_TERMS, custom, strict=True)))}
+    policy = replace(P.with_overrides({"weights_preset": preset, "tolerance_policy": tolerance}),
+                     preset_weights=edited)
     m = a_mission()
     results = [evaluate_eligibility(replace(build(*s), aircraft_id=i + 1, tail_number=f"4X-T{i:02d}"), m, policy,
                                     ctx()) for i, s in enumerate(specs)]

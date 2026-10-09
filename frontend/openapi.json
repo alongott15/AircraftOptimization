@@ -1663,6 +1663,138 @@
     }
    }
   },
+  "/api/v1/settings/weights": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Get Weights",
+    "operationId": "get_weights_api_v1_settings_weights_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeightsOut"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Put Weights",
+    "operationId": "put_weights_api_v1_settings_weights_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WeightsIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeightsOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/settings/tg-weights": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Get Tg Weights",
+    "operationId": "get_tg_weights_api_v1_settings_tg_weights_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/TgWeightOut"
+         },
+         "type": "array",
+         "title": "Response Get Tg Weights Api V1 Settings Tg Weights Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "Put Tg Weights",
+    "operationId": "put_tg_weights_api_v1_settings_tg_weights_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "items": {
+         "$ref": "#/components/schemas/TgWeightIn"
+        },
+        "type": "array",
+        "title": "Body"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/TgWeightOut"
+         },
+         "type": "array",
+         "title": "Response Put Tg Weights Api V1 Settings Tg Weights Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/settings/hangar-capacity": {
    "get": {
     "tags": [
@@ -4557,6 +4689,21 @@
       ],
       "title": "Idle Policy"
      },
+     "tolerance_policy": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "WARN",
+         "NEVER"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tolerance Policy"
+     },
      "expiring_soon_days": {
       "anyOf": [
        {
@@ -5215,6 +5362,96 @@
     ],
     "title": "TermOut"
    },
+   "TgWeightIn": {
+    "properties": {
+     "type_code": {
+      "type": "string",
+      "maxLength": 16,
+      "minLength": 1,
+      "title": "Type Code"
+     },
+     "inspection_type_code": {
+      "type": "string",
+      "maxLength": 24,
+      "minLength": 1,
+      "title": "Inspection Type Code"
+     },
+     "unit": {
+      "type": "string",
+      "enum": [
+       "LDG",
+       "CYC"
+      ],
+      "title": "Unit"
+     },
+     "tg_weight": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 5.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tg Weight"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "type_code",
+     "inspection_type_code",
+     "unit"
+    ],
+    "title": "TgWeightIn"
+   },
+   "TgWeightOut": {
+    "properties": {
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "inspection_type_code": {
+      "type": "string",
+      "title": "Inspection Type Code"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "reference_tg_weight": {
+      "type": "number",
+      "title": "Reference Tg Weight"
+     },
+     "override_tg_weight": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Override Tg Weight"
+     },
+     "effective_tg_weight": {
+      "type": "number",
+      "title": "Effective Tg Weight"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type_code",
+     "inspection_type_code",
+     "unit",
+     "reference_tg_weight",
+     "override_tg_weight",
+     "effective_tg_weight"
+    ],
+    "title": "TgWeightOut"
+   },
    "TimelineItemOut": {
     "properties": {
      "aircraft_id": {
@@ -5359,6 +5596,65 @@
      "type"
     ],
     "title": "ValidationError"
+   },
+   "WeightsIn": {
+    "properties": {
+     "presets": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": 0.0
+       },
+       "propertyNames": {
+        "enum": [
+         "risk",
+         "best_fit",
+         "balance",
+         "capacity",
+         "base_match",
+         "warnings"
+        ]
+       },
+       "type": "object"
+      },
+      "propertyNames": {
+       "enum": [
+        "BALANCED",
+        "MAX_SAFETY",
+        "MAX_AVAILABILITY"
+       ]
+      },
+      "type": "object",
+      "minProperties": 1,
+      "title": "Presets"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "presets"
+    ],
+    "title": "WeightsIn"
+   },
+   "WeightsOut": {
+    "properties": {
+     "presets": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "type": "number"
+       },
+       "type": "object"
+      },
+      "type": "object",
+      "title": "Presets"
+     }
+    },
+    "type": "object",
+    "required": [
+     "presets"
+    ],
+    "title": "WeightsOut"
    }
   }
  }

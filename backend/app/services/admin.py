@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import math
+import re
 import threading
 import uuid
 from datetime import datetime, timedelta
@@ -14,10 +16,11 @@ from sqlalchemy.orm import Session
 
 from app.db import orm
 from app.domain.models import KNOWN_RESTRICTIONS, EngineRequirement, MissionType
-from app.domain.policy import WEIGHT_PRESETS
+from app.domain.policy import normalize_weights
 from app.domain.reason_codes import ReasonCode, UnblockCode, WarningCode
 from app.repositories import store
-from app.security.auth import SessionUser, verify_password
+from app.security.auth import SessionUser, hash_password, verify_password
+from app.security.rbac import ROLES
 from app.services.container import Container
 from app.services.context import FleetContext
 from app.services.errors import ServiceError, not_found
@@ -42,6 +45,50 @@ def authenticate(s: Session, username: str, password: str) -> SessionUser | None
     if row is None or not row.is_active or row.oidc_subject or not verify_password(row.password_hash, password):
         return None
     return _session_user(row)
+
+
+USERNAME_RE = re.compile(r"[a-z0-9][a-z0-9._-]{2,49}")
+MIN_PASSWORD_LENGTH = 12
+
+
+def _check_password(username: str, password: str) -> None:
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise ServiceError(422, "VALIDATION_ERROR", f"password must have at least {MIN_PASSWORD_LENGTH} characters")
+    if password.lower() == username.lower():
+        raise ServiceError(422, "VALIDATION_ERROR", "password must differ from the username")
+
+
+def create_local_user(s: Session, username: str, display_name: str, role: str, password: str,
+                      now: datetime) -> SessionUser:
+    """POC local account (APP_AUTH_MODE=local). Audited as USER_CREATE; the password is never logged."""
+    if not USERNAME_RE.fullmatch(username):
+        raise ServiceError(422, "VALIDATION_ERROR", "username: 3-50 chars, lowercase letters, digits, . _ -")
+    if role not in ROLES:
+        raise ServiceError(422, "VALIDATION_ERROR", f"role must be one of {', '.join(ROLES)}")
+    if store.get_user_by_username(s, username) is not None:
+        raise ServiceError(409, "CONFLICT", "username already exists")
+    _check_password(username, password)
+    row = orm.AppUserRow(username=username, display_name=(display_name or username)[:100],
+                         password_hash=hash_password(password), role=role, is_active=True, created_at=now)
+    s.add(row)
+    s.flush()
+    store.write_audit(s, at=now, user_id=None, action="USER_CREATE", entity_type="user", entity_id=str(row.user_id),
+                      details={"username": username, "role": role, "via": "cli"})
+    return _session_user(row)
+
+
+def set_local_password(s: Session, username: str, password: str, now: datetime) -> None:
+    """Reset a local account's password (never an SSO-linked one). Audited as USER_PASSWORD_SET."""
+    row = store.get_user_by_username(s, username)
+    if row is None:
+        raise not_found("user")
+    if row.oidc_subject:
+        raise ServiceError(409, "CONFLICT", "SSO users have no local password")
+    _check_password(username, password)
+    row.password_hash = hash_password(password)
+    s.flush()
+    store.write_audit(s, at=now, user_id=None, action="USER_PASSWORD_SET", entity_type="user",
+                      entity_id=str(row.user_id), details={"username": username, "via": "cli"})
 
 
 def upsert_sso_user(s: Session, subject: str, username: str, display_name: str, role: str,
@@ -78,11 +125,11 @@ def db_ok(s: Session) -> bool:
 
 
 # ── reference ──────────────────────────────────────────────────────────
-def reference(c: Container) -> dict[str, Any]:
+def reference(c: Container, s: Session) -> dict[str, Any]:
     ref = c.ds.load_reference()
     ref.update({
         "restrictions": sorted(KNOWN_RESTRICTIONS),
-        "weight_presets": {k: dict(v) for k, v in WEIGHT_PRESETS.items()},
+        "weight_presets": store.load_weights(s),
         "mission_types": [str(m) for m in MissionType],
         "engine_requirements": [str(e) for e in EngineRequirement],
         "codes": {"reasons": [str(x) for x in ReasonCode], "warnings": [str(x) for x in WarningCode],
@@ -144,6 +191,61 @@ def update_policy(s: Session, values: dict[str, Any], user_id: int, now: datetim
     store.save_policy(s, values, user_id, now)
     s.flush()
     return policy(s)
+
+
+def weights(s: Session) -> dict[str, dict[str, float]]:
+    return store.load_weights(s)
+
+
+def update_weights(s: Session, presets: dict[str, dict[str, float]]) -> dict[str, dict[str, float]]:
+    try:
+        clean = {code: normalize_weights(w) for code, w in presets.items()}
+    except ValueError as exc:
+        raise ServiceError(422, "VALIDATION_ERROR", str(exc), errors=[
+            {"field": "weights", "code": "INVALID_VALUE", "params": {}}]) from exc
+    store.save_weights(s, clean)
+    s.flush()
+    return weights(s)
+
+
+TG_UNITS = ("LDG", "CYC")
+
+
+def tg_weights(c: Container, s: Session) -> list[dict[str, Any]]:
+    """Every LDG/CYC limit with its reference weight (lake) and the admin override, if any."""
+    overrides = store.tg_overrides(s)
+    out = []
+    for it in c.ds.load_reference()["inspection_types"]:
+        for lim in it["limits"]:
+            reference = lim["tg_weight"]
+            if lim["unit"] not in TG_UNITS or reference is None:  # unreadable lake weight ⇒ DATA_MISSING already
+                continue
+            key = (lim["type_code"], it["inspection_type_code"], lim["unit"])
+            override = overrides.get(key)
+            effective = reference if override is None or not math.isfinite(override) else max(reference, override)
+            out.append({"type_code": key[0], "inspection_type_code": key[1], "unit": key[2],
+                        "reference_tg_weight": reference, "override_tg_weight": override,
+                        "effective_tg_weight": effective})
+    return sorted(out, key=lambda r: (r["type_code"], r["inspection_type_code"], r["unit"]))
+
+
+def update_tg_weights(c: Container, s: Session, rows: list[tuple[str, str, str, float | None]], user_id: int,
+                      now: datetime) -> list[dict[str, Any]]:
+    reference = {(r["type_code"], r["inspection_type_code"], r["unit"]): r["reference_tg_weight"]
+                 for r in tg_weights(c, s)}
+    unknown = [r for r in rows if (r[0], r[1], r[2]) not in reference]
+    if unknown:
+        raise ServiceError(422, "VALIDATION_ERROR", "unknown limit", errors=[
+            {"field": "limit", "code": "INVALID_VALUE", "params": {"limit": f"{u[0]}/{u[1]}/{u[2]}"}}
+            for u in unknown])
+    too_low = [r for r in rows if r[3] is not None and r[3] < reference[(r[0], r[1], r[2])]]
+    if too_low:  # a lower weight would under-project against the maintenance system's due value
+        raise ServiceError(422, "VALIDATION_ERROR", "override below the reference weight", errors=[
+            {"field": "tg_weight", "code": "VALUE_TOO_SMALL", "params": {"min": reference[(r[0], r[1], r[2])]}}
+            for r in too_low])
+    store.save_tg_overrides(s, rows, user_id, now)
+    s.flush()
+    return tg_weights(c, s)
 
 
 def hangar(s: Session, base_code: str | None) -> list[dict[str, Any]]:

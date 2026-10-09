@@ -110,8 +110,14 @@ class InspectionLimit:
     unit: Unit
     interval_value: float
     tolerance_value: float = 0.0
-    tg_weight: float = 1.0
+    tg_weight: float = 1.0  # lake weight: how the maintenance system counts flown TGs into due_value (never changed)
     zone_code: str | None = None
+    # Admin override (FR-60) used ONLY to project planned/committed touch-and-goes; never below tg_weight.
+    projection_tg_weight: float | None = None
+
+    @property
+    def planning_tg_weight(self) -> float:
+        return self.tg_weight if self.projection_tg_weight is None else self.projection_tg_weight
 
 
 @dataclass(frozen=True, slots=True)

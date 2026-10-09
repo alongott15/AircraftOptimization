@@ -21,8 +21,11 @@ import type {
   Policy,
   Reference,
   SourceFreshness,
+  TgWeight,
+  TgWeightInput,
   TimelineItem,
   User,
+  Weights,
 } from './types';
 
 const retry = (count: number, error: unknown) =>
@@ -43,6 +46,8 @@ export const qk = {
   run: (id: string) => ['runs', id] as const,
   policy: ['settings', 'policy'] as const,
   hangar: ['settings', 'hangar'] as const,
+  weights: ['settings', 'weights'] as const,
+  tgWeights: ['settings', 'tg-weights'] as const,
   models: ['ml', 'models'] as const,
   audit: (q: Query) => ['audit', q] as const,
 };
@@ -227,6 +232,36 @@ export function useUpdatePolicy() {
   return useMutation({
     mutationFn: (body: Partial<Policy>) => api<Policy>('/settings/policy', { method: 'PUT', body }),
     onSuccess: (p) => qc.setQueryData(qk.policy, p),
+  });
+}
+
+export const useWeights = () =>
+  useQuery({ queryKey: qk.weights, queryFn: () => api<Weights>('/settings/weights'), retry });
+
+export const useTgWeights = () =>
+  useQuery({ queryKey: qk.tgWeights, queryFn: () => api<TgWeight[]>('/settings/tg-weights'), retry });
+
+export function useSaveWeights() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (presets: Weights['presets']) => api<Weights>('/settings/weights', { method: 'PUT', body: { presets } }),
+    onSuccess: (w) => {
+      qc.setQueryData(qk.weights, w);
+      void qc.invalidateQueries({ queryKey: qk.reference });
+    },
+  });
+}
+
+export function useSaveTgWeights() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: TgWeightInput[]) => api<TgWeight[]>('/settings/tg-weights', { method: 'PUT', body: rows }),
+    onSuccess: (rows) => {
+      qc.setQueryData(qk.tgWeights, rows);
+      // eligibility and fleet status depend on the weights
+      void qc.invalidateQueries({ queryKey: ['fleet'] });
+      void qc.invalidateQueries({ queryKey: ['aircraft'] });
+    },
   });
 }
 

@@ -251,7 +251,7 @@ def evaluate_eligibility(
             reasons.append(reason)
             if p.outcome != Outcome.MISSING:
                 failing.append(p)
-                _tolerance_warning(p, warnings)
+                _tolerance_warning(p, policy, warnings)
         elif p.outcome == Outcome.OK:
             _ok_item_warnings(p, policy, end_at, warnings)
             later_reason = _later_commitment_reason(p, later, cpol, engines)
@@ -315,8 +315,11 @@ def _later_commitment_reason(
     return None
 
 
-def _tolerance_warning(p: Projection, warnings: list[Reason]) -> None:
+def _tolerance_warning(p: Projection, policy: PlanningPolicy, warnings: list[Reason]) -> None:
+    """Tolerance never grants eligibility; with tolerance_policy=NEVER it is not even suggested."""
     item = p.item
+    if policy.tolerance_policy == "NEVER":
+        return
     if (item.source == ItemSource.INSPECTION and item.kind == ItemKind.COUNTER and item.tolerance > 0
             and p.remaining_after is not None and p.remaining_after + item.tolerance >= 0):
         warnings.append(Reason(WarningCode.TOLERANCE_AVAILABLE, {

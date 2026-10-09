@@ -1,4 +1,7 @@
-import { Anchor, Card, Grid, Group, Paper, Progress, ScrollArea, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
+import {
+  Anchor, Card, Grid, Group, Paper, Progress, ScrollArea, SegmentedControl, SimpleGrid, Stack, Table, Text, Title,
+} from '@mantine/core';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAircraftList, useAlerts, useFleetSummary, useReference, useTimeline } from '../api/hooks';
@@ -11,7 +14,8 @@ import { t } from '../i18n';
 export function DashboardPage() {
   const summary = useFleetSummary();
   const alerts = useAlerts();
-  const timeline = useTimeline(30);
+  const [days, setDays] = useState('30');  // FR-13: 14 / 30 / 90 days
+  const timeline = useTimeline(Number(days));
   const fleet = useAircraftList({ page_size: 200 });
   const reference = useReference();
   const names = useNames();
@@ -70,7 +74,11 @@ export function DashboardPage() {
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Card h="100%">
-            <Title order={4} mb="sm">{t('dashboard.timeline')}</Title>
+            <Group justify="space-between" mb="sm" wrap="nowrap">
+              <Title order={4}>{t('dashboard.timeline', { days })}</Title>
+              <SegmentedControl size="xs" value={days} onChange={setDays} aria-label={t('dashboard.timelineRange')}
+                data-testid="timeline-range" data={['14', '30', '90']} />
+            </Group>
             {timeline.isPending ? <LoadingState /> : timeline.isError ? <ErrorState error={timeline.error} /> : (
               <ScrollArea h={360}>
                 <Table striped highlightOnHover>

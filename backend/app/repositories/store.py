@@ -6,7 +6,9 @@ Queries only — no business logic. Returns ORM rows or plain domain values.
 from __future__ import annotations
 
 import json
+import logging
 from collections import defaultdict
+from dataclasses import replace
 from datetime import datetime
 from typing import Any
 
@@ -15,13 +17,55 @@ from sqlalchemy.orm import Session
 
 from app.db import orm
 from app.domain.models import CommittedMission
-from app.domain.policy import PlanningPolicy
+from app.domain.policy import WEIGHT_PRESETS, PlanningPolicy, normalize_weights
+
+_log = logging.getLogger(__name__)
 
 
 # ── policy ──────────────────────────────────────────────────────────────
 def load_policy(s: Session) -> PlanningPolicy:
     values = {r.policy_key: json.loads(r.value_json) for r in s.scalars(select(orm.PlanningPolicyRow))}
-    return PlanningPolicy().with_overrides(values)
+    return replace(PlanningPolicy().with_overrides(values), preset_weights=load_weights(s))
+
+
+def load_weights(s: Session) -> dict[str, dict[str, float]]:
+    """Preset weights from the app store; an unreadable row falls back to the built-in preset (ranking only)."""
+    out = {code: dict(w) for code, w in WEIGHT_PRESETS.items()}
+    for row in s.scalars(select(orm.WeightPresetRow)):
+        try:
+            out[row.preset_code] = normalize_weights(json.loads(row.weights_json))
+        except (ValueError, TypeError):
+            _log.warning("weight_preset.unreadable", extra={"preset_code": row.preset_code})  # built-in used
+    return out
+
+
+def save_weights(s: Session, presets: dict[str, dict[str, float]]) -> None:
+    for code, weights in presets.items():
+        row = s.get(orm.WeightPresetRow, code)
+        if row is None:
+            s.add(orm.WeightPresetRow(preset_code=code, weights_json=json.dumps(weights)))
+        else:
+            row.weights_json = json.dumps(weights)
+
+
+def tg_overrides(s: Session) -> dict[tuple[str, str, str], float]:
+    """(type_code, inspection_type_code, unit) → admin-set touch-and-go weight (FR-60)."""
+    return {(r.type_code, r.inspection_type_code, r.unit_code): r.tg_weight
+            for r in s.scalars(select(orm.TgWeightOverrideRow))}
+
+
+def save_tg_overrides(s: Session, rows: list[tuple[str, str, str, float | None]], user_id: int,
+                      now: datetime) -> None:
+    for type_code, code, unit, weight in rows:
+        row = s.get(orm.TgWeightOverrideRow, (type_code, code, unit))
+        if weight is None:
+            if row is not None:
+                s.delete(row)
+        elif row is None:
+            s.add(orm.TgWeightOverrideRow(type_code=type_code, inspection_type_code=code, unit_code=unit,
+                                          tg_weight=weight, updated_by=user_id, updated_at=now))
+        else:
+            row.tg_weight, row.updated_by, row.updated_at = weight, user_id, now
 
 
 def save_policy(s: Session, values: dict[str, Any], user_id: int, now: datetime) -> None:

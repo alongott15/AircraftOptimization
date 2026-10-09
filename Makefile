@@ -1,5 +1,5 @@
 # Fleet Usability Optimizer — developer commands (see CLAUDE.md)
-.PHONY: setup migrate migration seed train demo dev dev-backend dev-frontend test test-backend test-frontend e2e lint gen-api
+.PHONY: setup migrate migration user password seed train demo dev dev-backend dev-frontend test test-backend test-frontend e2e lint gen-api
 
 BACKEND := cd backend &&
 FRONTEND := cd frontend &&
@@ -17,6 +17,14 @@ migrate:
 ## New migration after changing app-store ORM models: make migration m="describe change"
 migration:
 	$(BACKEND) uv run alembic revision --autogenerate -m "$(m)"
+
+## Create a local login (POC, APP_AUTH_MODE=local) — prompts for username and a hidden password: make user [role=ADMIN]
+user:
+	$(BACKEND) uv run python -m app.manage create-user --role $(or $(role),ADMIN)
+
+## New password for a local login: make password
+password:
+	$(BACKEND) uv run python -m app.manage set-password
 
 ## Generate data/poc.sqlite anchored to "now" (demo scenarios are relative to the anchor)
 seed:

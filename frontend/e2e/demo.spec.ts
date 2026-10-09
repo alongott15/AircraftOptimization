@@ -169,3 +169,17 @@ test('fleet apron shows every aircraft in 3D and opens it on click', async ({ pa
   await page.locator('button.ao-hotspot[data-tail="4X-J04"]').click();
   await expect(page).toHaveURL(/\/aircraft\/4X-J04$/);
 });
+
+test('timeline range and admin settings: weights, tolerance policy, touch-and-go weights (FR-13/45/60)', async ({ page }) => {
+  await login(page, 'admin');
+  await page.getByTestId('timeline-range').getByText('90').click();
+  await expect(page.getByRole('heading', { name: 'פריטים קרובים — 90 הימים הבאים' })).toBeVisible();
+  await page.goto('/settings');
+  await expect(page.getByTestId('weights-card')).toContainText('בטיחות מקסימלית');
+  await expect(page.getByTestId('tolerance-policy')).toContainText('ללא שימוש');
+  await expect(page.getByTestId('tg-weights-card')).toContainText('ערך ייחוס');
+  expect(await latinOutsideBdi(page)).toEqual([]);
+  const axe = await new AxeBuilder({ page }).analyze();
+  const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(serious.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`))).toEqual([]);
+});

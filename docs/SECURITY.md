@@ -33,6 +33,10 @@ recommendations; **safety** principles make sure the software can never make an 
 ### 3.1 Modes
 - **POC (`APP_AUTH_MODE=local`)**: users in `app_user`, argon2id hashes, login rate limit 5/min/IP + lockout after
   10 failures (15 min). Demo passwords come from `APP_DEMO_PASSWORD` in `.env` (template `.env.example`), never committed.
+  Personal accounts: `make user` (= `python -m app.manage create-user`, default role ADMIN) and `make password`. The
+  password is read from a hidden prompt (never from arguments/shell history), must have ≥ 12 characters, is stored
+  as argon2id and never logged; creation/reset is audited (`USER_CREATE`, `USER_PASSWORD_SET`). Disabled in
+  `APP_AUTH_MODE=oidc`. `make demo` recreates the POC database, so accounts must be re-created after reseeding.
 - **Production (`APP_AUTH_MODE=oidc`)**: OIDC (Azure AD / Keycloak / ADFS) authorization-code + PKCE; roles mapped from
   IdP groups (`AO-Viewers`, `AO-Planners`, `AO-MaintControl`, `AO-Admins`). Local login disabled.
 - Session: signed JWT (HS256 with ≥ 32-byte secret from env) in cookie; `typ=session`, `sub`, `role`, `exp`, `jti` —
@@ -120,7 +124,8 @@ the enforcement point. Each endpoint has an authorization test (TESTING.md §3.5
 ## 9. Audit events (minimum)
 `LOGIN`, `LOGIN_FAILED`, `LOGOUT`, `MISSION_CREATE`, `MISSION_UPDATE`, `MISSION_CANCEL`, `OPTIMIZE`, `ASSIGN`,
 `ASSIGN_CANCEL`, `POLICY_UPDATE` (before/after), `HANGAR_CAPACITY_UPDATE`, `MODEL_RETRAIN`, `FORCE_INCLUDE_REJECTED`,
-`HORIZON_PLAN`, `HORIZON_ASSIGN`.
+`HORIZON_PLAN`, `HORIZON_ASSIGN`, `WEIGHTS_UPDATE` (before/after), `TG_WEIGHTS_UPDATE` (before/after),
+`USER_CREATE`, `USER_PASSWORD_SET`.
 
 `audit_log` is append-only in the database as well: UPDATE/DELETE triggers (SQLite + PostgreSQL, Alembic `0002` and the
 POC `create_all` path) abort any change. In production also grant the app role `INSERT, SELECT` only on that table.

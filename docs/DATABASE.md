@@ -233,9 +233,19 @@ CREATE TABLE planning_policy (
   updated_at   TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
-CREATE TABLE weight_preset (
+CREATE TABLE weight_preset (                           -- admin-editable (FR-45); normalized to sum 1
   preset_code   VARCHAR(24) PRIMARY KEY,                 -- BALANCED, MAX_SAFETY, MAX_AVAILABILITY
   weights_json  TEXT NOT NULL
+);
+
+CREATE TABLE tg_weight_override (                      -- Alembic 0003; FR-60. Lake reference stays read-only;
+  type_code             VARCHAR(16) NOT NULL,           -- the app applies these when it loads the fleet
+  inspection_type_code  VARCHAR(24) NOT NULL,
+  unit_code             VARCHAR(16) NOT NULL,           -- LDG | CYC
+  tg_weight             FLOAT NOT NULL CHECK (tg_weight >= 0 AND tg_weight <= 5),  -- planned use only, ≥ lake weight
+  updated_by            INTEGER REFERENCES app_user,
+  updated_at            TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (type_code, inspection_type_code, unit_code)
 );
 
 CREATE TABLE hangar_capacity (

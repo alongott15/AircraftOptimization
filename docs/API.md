@@ -68,7 +68,7 @@ This document is the human contract; if code and doc disagree, fix one of them i
 | Method | Path | Role | Response |
 |--------|------|------|----------|
 | GET | `/fleet/summary` | VIEWER | KPIs (below) |
-| GET | `/fleet/alerts?status=EXPIRED,EXPIRING_SOON,UNKNOWN&limit=100` | VIEWER | flat list of non-OK items across fleet, sorted by severity then due |
+| GET | `/fleet/alerts?status=EXPIRED,EXPIRING_SOON,UNKNOWN&limit=100` | VIEWER | flat list of non-OK items across fleet, sorted by severity then due; with `EXPIRED`, also future assigned missions whose tail is no longer eligible (`source = ASSIGNMENT`, `ref` = mission name, `due_at` = mission start) |
 | GET | `/fleet/timeline?days=30` | VIEWER | predicted due items (uses utilization forecast; `predicted=true` flag) |
 | GET | `/fleet/data-freshness` | VIEWER | `[{source_name, loaded_at, is_stale}]` |
 
@@ -238,6 +238,10 @@ qualification mismatch — last).
 |--------|------|------|-------|
 | GET | `/settings/policy` | VIEWER | effective policy (OPT §1.2) |
 | PUT | `/settings/policy` | ADMIN | partial update; validated ranges; audit with before/after |
+| GET | `/settings/weights` | VIEWER | `{presets: {BALANCED: {risk, best_fit, balance, capacity, base_match, warnings}, …}}` (FR-45) |
+| PUT | `/settings/weights` | ADMIN | `{presets: {...}}` — every term required, none negative, normalized to sum 1; audit `WEIGHTS_UPDATE` |
+| GET | `/settings/tg-weights` | VIEWER | every LDG/CYC limit: `type_code, inspection_type_code, unit, reference_tg_weight, override_tg_weight, effective_tg_weight` (FR-60) |
+| PUT | `/settings/tg-weights` | ADMIN | `[{type_code, inspection_type_code, unit, tg_weight (reference–5, null = back to reference)}]`; unknown limit ⇒ 422; below the reference ⇒ 422 `VALUE_TOO_SMALL` (overrides weight planned use only and may only be more conservative — OPT §3.3); audit `TG_WEIGHTS_UPDATE` with before |
 | GET | `/settings/hangar-capacity?base_code=` | VIEWER | |
 | PUT | `/settings/hangar-capacity` | ADMIN | `[{base_code, iso_week, slots}]` |
 | GET | `/audit?from=&to=&user_id=&action=` | ADMIN, MAINTENANCE_CONTROLLER | paginated |
