@@ -29,7 +29,7 @@ jobs:
       - run: uv run lint-imports
       - run: uv run pytest --cov=app --cov-branch -o addopts="-m 'not perf'"
       - run: uv run pytest -m perf -o addopts=""
-      - run: uvx pip-audit==2.9.0 --strict -r <(uv export --frozen --no-dev --no-hashes)
+      - run: uvx pip-audit==2.9.0 --strict -r <(uv export --frozen --no-dev --no-hashes --no-emit-project)
         shell: bash
 
   frontend:
