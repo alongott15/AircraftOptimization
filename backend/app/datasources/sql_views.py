@@ -33,6 +33,7 @@ Row = Mapping[str, Any]
 VIEWS = (
     "aircraft_type",
     "base",
+    "squadron",
     "aircraft",
     "activity_unit",
     "usage_counter",
@@ -109,6 +110,11 @@ def _flag(value: Any) -> bool:
 
 def _unit(value: Any) -> Unit | None:
     return Unit(str(value)) if value else None
+
+
+def _code(value: Any) -> str | None:
+    """Lake codes are trimmed; empty ⇒ NULL (an aircraft without a squadron is never "in" a chosen one)."""
+    return str(value).strip() or None if value is not None else None
 
 
 def _severity(value: Any) -> Severity:
@@ -324,6 +330,7 @@ class SqlViewSource:
                     serial_number=r["serial_number"],
                     aircraft_type=aircraft_type,
                     base_code=r["base_code"],
+                    squadron_code=_code(r.get("squadron_code")),
                     status=status,
                     manufacture_date=manufactured,
                     last_flight_at=_dt(r["last_flight_at"]),
@@ -370,6 +377,11 @@ class SqlViewSource:
             ],
             "bases": [
                 {"base_code": r["base_code"], "name_he": r["name_he"]} for r in self._select("base", order="base_code")
+            ],
+            "squadrons": [
+                {"squadron_code": _code(r["squadron_code"]), "name_he": r["name_he"], "base_code": r["base_code"]}
+                for r in self._select("squadron", order="squadron_code")
+                if _code(r["squadron_code"])
             ],
             "qualifications": [
                 {"qualification_code": r["qualification_code"], "name_he": r["name_he"]}

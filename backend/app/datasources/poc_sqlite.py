@@ -39,6 +39,8 @@ class PocSqliteSource:
                     for r in s.scalars(select(orm.AircraftTypeRow).order_by(orm.AircraftTypeRow.type_code))],
                 "bases": [{"base_code": r.base_code, "name_he": r.name_he}
                           for r in s.scalars(select(orm.BaseRow).order_by(orm.BaseRow.base_code))],
+                "squadrons": [{"squadron_code": r.squadron_code, "name_he": r.name_he, "base_code": r.base_code}
+                              for r in s.scalars(select(orm.SquadronRow).order_by(orm.SquadronRow.squadron_code))],
                 "qualifications": [{"qualification_code": r.qualification_code, "name_he": r.name_he}
                                    for r in s.scalars(select(orm.QualificationRow))],
                 "activity_units": [{"unit_code": r.unit_code, "name_he": r.name_he, "short_he": r.short_he,

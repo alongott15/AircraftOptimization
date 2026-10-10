@@ -84,6 +84,15 @@ class BaseRow(FleetBase):
     name_he: Mapped[str] = mapped_column(String(100))
 
 
+class SquadronRow(FleetBase):
+    """Squadron (טייסת) — the operating unit an aircraft belongs to."""
+
+    __tablename__ = "squadron"
+    squadron_code: Mapped[str] = mapped_column(String(8), primary_key=True)
+    name_he: Mapped[str] = mapped_column(String(60))
+    base_code: Mapped[str] = mapped_column(ForeignKey("base.base_code"))
+
+
 class AircraftRow(FleetBase):
     __tablename__ = "aircraft"
     aircraft_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -91,6 +100,7 @@ class AircraftRow(FleetBase):
     serial_number: Mapped[str] = mapped_column(String(32))
     type_code: Mapped[str] = mapped_column(ForeignKey("aircraft_type.type_code"))
     base_code: Mapped[str] = mapped_column(ForeignKey("base.base_code"))
+    squadron_code: Mapped[str | None] = mapped_column(ForeignKey("squadron.squadron_code"), nullable=True)
     status: Mapped[str] = mapped_column(String(16))
     manufacture_date: Mapped[date] = mapped_column(Date)
     last_flight_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
@@ -325,6 +335,15 @@ class MissionRow(AppBase):
     created_by: Mapped[int] = mapped_column(ForeignKey("app_user.user_id"))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
+class MissionScopeRow(AppBase):
+    """Planner's choice of squadrons / aircraft types for a mission (none of a kind = any). Alembic 0004."""
+
+    __tablename__ = "mission_scope"
+    mission_id: Mapped[int] = mapped_column(ForeignKey("mission.mission_id", ondelete="CASCADE"), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), primary_key=True)  # SQUADRON | AIRCRAFT_TYPE
+    code: Mapped[str] = mapped_column(String(16), primary_key=True)
 
 
 class MissionQualificationRow(AppBase):

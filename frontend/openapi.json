@@ -594,6 +594,22 @@
        ],
        "title": "Expiry"
       }
+     },
+     {
+      "name": "squadron_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Squadron Code"
+      }
      }
     ],
     "responses": {
@@ -2108,6 +2124,17 @@
       "type": "string",
       "title": "Base Code"
      },
+     "squadron_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Squadron Code"
+     },
      "operational_status": {
       "type": "string",
       "title": "Operational Status"
@@ -2260,6 +2287,7 @@
      "type_code",
      "engine_count",
      "base_code",
+     "squadron_code",
      "operational_status",
      "derived_status",
      "compliance_status",
@@ -2309,6 +2337,17 @@
      "base_code": {
       "type": "string",
       "title": "Base Code"
+     },
+     "squadron_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Squadron Code"
      },
      "operational_status": {
       "type": "string",
@@ -2381,6 +2420,7 @@
      "type_code",
      "engine_count",
      "base_code",
+     "squadron_code",
      "operational_status",
      "derived_status",
      "compliance_status",
@@ -4023,6 +4063,22 @@
       "type": "array",
       "maxItems": 6,
       "title": "Expiry Windows"
+     },
+     "squadron_codes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Squadron Codes"
+     },
+     "aircraft_type_codes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 10,
+      "title": "Aircraft Type Codes"
      }
     },
     "additionalProperties": false,
@@ -4163,6 +4219,20 @@
       "type": "array",
       "title": "Expiry Windows"
      },
+     "squadron_codes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Squadron Codes"
+     },
+     "aircraft_type_codes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Aircraft Type Codes"
+     },
      "created_by": {
       "type": "integer",
       "title": "Created By"
@@ -4231,6 +4301,8 @@
      "force_exclude",
      "overrides",
      "expiry_windows",
+     "squadron_codes",
+     "aircraft_type_codes",
      "created_by",
      "created_at",
      "updated_at",
@@ -5156,6 +5228,14 @@
       "type": "array",
       "title": "Bases"
      },
+     "squadrons": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Squadrons"
+     },
      "qualifications": {
       "items": {
        "additionalProperties": true,
@@ -5235,6 +5315,7 @@
     "required": [
      "aircraft_types",
      "bases",
+     "squadrons",
      "qualifications",
      "activity_units",
      "inspection_types",

@@ -512,3 +512,18 @@ def test_context_applies_overrides_conservatively_and_flags_bad_values() -> None
     assert lg(_with_tg_overrides(ac, {key: 0.2})).planning_tg_weight == 1.0  # never below the lake weight
     flagged = _with_tg_overrides(ac, {key: math.nan})
     assert ("INSPECTION_LIMIT", "LG_INSP") in flagged.data_issues
+
+
+# ── mission scope: squadrons / aircraft types chosen by the planner (FR-35) ──
+def test_mission_scope_excludes_other_types_and_squadrons_with_reasons() -> None:
+    ac = replace(an_aircraft("TP-200").build(), squadron_code="SQ-21")
+    assert evaluate_eligibility(ac, a_mission(), P, ctx()).eligible  # empty scope = any
+    in_scope = a_mission(type_codes=frozenset({"TP-200"}), squadron_codes=frozenset({"SQ-21", "SQ-22"}))
+    assert evaluate_eligibility(ac, in_scope, P, ctx()).eligible
+    r = evaluate_eligibility(ac, a_mission(type_codes=frozenset({"JT-300"}), squadron_codes=frozenset({"SQ-31"})),
+                             P, ctx())
+    assert reason(r, "AIRCRAFT_TYPE_NOT_SELECTED").params == {"type_code": "TP-200"}
+    assert reason(r, "SQUADRON_NOT_SELECTED").params == {"squadron_code": "SQ-21"}
+    orphan = replace(ac, squadron_code=None)  # no squadron on record ⇒ never "in" a chosen squadron
+    assert "SQUADRON_NOT_SELECTED" in codes(evaluate_eligibility(orphan, a_mission(squadron_codes=frozenset({"SQ-21"})),
+                                                                 P, ctx()))

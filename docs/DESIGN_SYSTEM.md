@@ -168,14 +168,24 @@ Lights: `hemisphereLight` + `directionalLight` (+ `ContactShadows`). **No HDR en
 the app must work offline). `OrbitControls` with damping, min/max distance, polar clamp above ground.
 
 ### 6.2 Procedural models by `model_shape`
+Realistic proportions in metres (`zones.ts`), geometry generated in `procedural.ts` — no model files (offline):
+fuselages lofted through elliptical sections, NACA-section wings/tails with taper, sweep and dihedral, lathed
+spinners/nacelles/nozzles, propellers with pitched blades, tyred landing gear; physically based materials (gloss
+paint with clearcoat, glass, metal, rubber) lit by an in-scene light rig (`StudioLights`, no HDR download).
+
 | Shape | Geometry |
 |-------|----------|
-| `SINGLE_PROP_LOW_WING` | slim fuselage, low straight wing, nose engine cowling + 2-blade prop (ENGINE_1), fixed tricycle gear |
-| `TWIN_TURBOPROP_HIGH_WING` | wider fuselage, high wing, 2 wing nacelles + 4-blade props (ENGINE_1 left, ENGINE_2 right), T-tail |
-| `TWIN_JET_LOW_WING` | long fuselage, swept low wing, 2 under-wing engine pods, conventional tail |
+| `SINGLE_PROP_LOW_WING` | turboprop trainer: tandem bubble canopy, 4-blade prop + spinner (NOSE/ENGINE_1), low wing, nav lights |
+| `TWIN_TURBOPROP_HIGH_WING` | transport: high wing + fairing, 2 nacelles with 4-blade props, sponson main gear, T-tail, windows |
+| `TWIN_JET_LOW_WING` | business jet: swept wing with winglets, rear-mounted engines on pylons, T-tail, oval windows |
+| `FIGHTER_SINGLE` | F-16-like: ventral intake, two-seat bubble canopy, LERX, conformal tanks, single fin, ventral fins, tip missiles |
+| `FIGHTER_TWIN` | F-15-like: boxy side intakes, large swept shoulder wing, twin vertical tails, twin nozzles, two-seat canopy |
 
+Fighters use a generated three-tone desert camouflage (deterministic canvas texture, grey underside, grey radome).
 Each mesh carries `userData.zone` (`NOSE, COCKPIT, FUSELAGE, WING_L, WING_R, ENGINE_1, ENGINE_2, GEAR_NOSE, GEAR_MAIN, TAIL`).
-Engine count comes from data (`model.engine_count`), never inferred from the shape name. Budget < 30k triangles.
+Engine count comes from data (`model.engine_count`): `shapeFor()` swaps to the same family's counterpart when a shape
+disagrees with it. The tail number is drawn on the fin(s) (white on livery, dark on camouflage). Settings → "דגמי
+תלת-ממד" previews every model. The fleet apron uses a lighter variant (no small details, shadows or clearcoat).
 Optional future: glTF per type in `public/models/<type>.glb` with the same zone node names.
 
 ### 6.3 Data overlays

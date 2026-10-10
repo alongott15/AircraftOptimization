@@ -51,7 +51,7 @@ def summary_row(ac: Aircraft, st: AircraftStatus, risk: RiskInfo | None) -> dict
     open_mas = ac.open_mas
     return {
         "aircraft_id": ac.aircraft_id, "tail_number": ac.tail_number, "type_code": ac.aircraft_type.type_code,
-        "engine_count": ac.aircraft_type.engine_count, "base_code": ac.base_code,
+        "engine_count": ac.aircraft_type.engine_count, "base_code": ac.base_code, "squadron_code": ac.squadron_code,
         "operational_status": str(ac.status), "derived_status": st.derived_status,
         "compliance_status": str(st.compliance_status), "expired_count": st.expired_count,
         "expiring_soon_count": st.expiring_soon_count, "open_ma_count": len(open_mas),
@@ -139,13 +139,15 @@ class BandFilter:
 def list_aircraft(fc: FleetContext, risks: dict[int, RiskInfo] | None, *, type_code: str | None,
                   base_code: str | None, status: str | None, compliance_status: list[str] | None,
                   qualification_code: str | None, q: str | None, sort: str,
-                  expiry: BandFilter | None = None) -> list[dict[str, Any]]:
+                  expiry: BandFilter | None = None, squadron_code: str | None = None) -> list[dict[str, Any]]:
     rows = []
     for ac in fc.aircraft:
         st = fc.status(ac)
         if type_code and ac.aircraft_type.type_code != type_code:
             continue
         if base_code and ac.base_code != base_code:
+            continue
+        if squadron_code and ac.squadron_code != squadron_code:
             continue
         if status and st.derived_status != status:
             continue

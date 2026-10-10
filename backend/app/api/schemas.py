@@ -80,6 +80,8 @@ class MissionIn(In):
     force_exclude: list[str] = Field(default_factory=list, max_length=50)
     overrides: MissionOverridesIn = Field(default_factory=MissionOverridesIn)
     expiry_windows: list[ExpiryWindowIn] = Field(default_factory=list, max_length=6)
+    squadron_codes: list[str] = Field(default_factory=list, max_length=20)  # FR-35: empty = any squadron
+    aircraft_type_codes: list[str] = Field(default_factory=list, max_length=10)  # FR-35: empty = any type
 
     @field_validator("start_at")
     @classmethod
@@ -214,6 +216,7 @@ class AircraftSummaryOut(Out):
     type_code: str
     engine_count: int
     base_code: str
+    squadron_code: str | None
     operational_status: str
     derived_status: str
     compliance_status: Status
@@ -430,6 +433,8 @@ class MissionOut(Out):
     force_exclude: list[str]
     overrides: dict[str, Any]
     expiry_windows: list[ExpiryWindowOut]
+    squadron_codes: list[str]
+    aircraft_type_codes: list[str]
     created_by: int
     created_at: str | None
     updated_at: str | None
@@ -551,6 +556,7 @@ class CodeList(Out):
 class ReferenceOut(Out):
     aircraft_types: list[dict[str, Any]]
     bases: list[dict[str, Any]]
+    squadrons: list[dict[str, Any]]
     qualifications: list[dict[str, Any]]
     activity_units: list[dict[str, Any]]
     inspection_types: list[dict[str, Any]]

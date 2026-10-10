@@ -104,7 +104,9 @@ def evaluate_all(fc: FleetContext, mission: MissionRequest, policy: PlanningPoli
     return [evaluate_eligibility(a, mission, policy, fc.eval_ctx) for a in fc.aircraft]
 
 
-_MISMATCH = frozenset({"ENGINE_REQUIREMENT_NOT_MET", "ENDURANCE_EXCEEDED", "QUALIFICATION_MISSING"})
+_MISMATCH = frozenset({"ENGINE_REQUIREMENT_NOT_MET", "ENDURANCE_EXCEEDED", "QUALIFICATION_MISSING",
+                       "AIRCRAFT_TYPE_NOT_SELECTED", "SQUADRON_NOT_SELECTED"})
+_SCOPE = frozenset({"AIRCRAFT_TYPE_NOT_SELECTED", "SQUADRON_NOT_SELECTED"})
 
 
 def _type_mismatch(cand: dict[str, Any]) -> bool:
@@ -205,7 +207,9 @@ def run_optimization(c: Container, s: Session, mission_row: orm.MissionRow, user
                                    x["tail_number"]))
     nearest = []
     if selection.shortfall > 0 or not eligible:
-        inel = sorted((r for r in results if not r.eligible), key=lambda r: (len(r.reasons), r.tail_number))
+        # out-of-scope aircraft were excluded by the planner's choice — they are not "nearly eligible"
+        inel = sorted((r for r in results if not r.eligible and not {str(x.code) for x in r.reasons} & _SCOPE),
+                      key=lambda r: (len(r.reasons), r.tail_number))
         nearest = [r.aircraft_id for r in inel[:3]]
     run_warnings = [] if risks is not None else [
         Reason(WarningCode.ML_MODEL_UNAVAILABLE, {"model_name": "defect_risk"}).to_dict()]

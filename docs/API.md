@@ -179,6 +179,9 @@ Item `status` ∈ `EXPIRED | EXPIRING_SOON | OK | UNKNOWN`. `revoked_by` = `{kin
                       { "unit": "CAL_DAY", "within": 0, "until": 7 } ]
 }
 ```
+`squadron_codes` / `aircraft_type_codes` (FR-35): mission scope, empty = any; unknown codes ⇒ 422 `UNKNOWN_SQUADRON` /
+`UNKNOWN_TYPE`; returned on `MissionOut` and honoured by `/eligibility/check`. `/reference` lists `squadrons`;
+`/aircraft` returns `squadron_code` and filters by `squadron_code`.
 `expiry_windows` (FR-34, ranking only — OPT §3.4): ≤ 6, one per unit (`DUPLICATE_UNIT`); a band "תוך … ועד …" with
 both bounds in that unit (days for CAL_DAY): `within` ≥ 0 (default 0) < `until` (required; else `WINDOW_RANGE`).
 Returned on `MissionOut`; stored in `mission.overrides_json` (unreadable stored entries are skipped).
@@ -289,6 +292,8 @@ DESIGN_SYSTEM.md §8). A contract test fails if the two sets differ.
 | `DATA_MISSING` | `item_kind` (COUNTER/INSPECTION/INSPECTION_LIMIT/PERMIT/DEFERRAL/LAST_FLIGHT/AIRCRAFT_TYPE/AIRCRAFT_STATUS/MAINTENANCE_ACTION — OPT §2.4a), `item_code` |
 | `DATA_STALE` | `source_name` (`flight_ops`/`mro`/`permits`/`aircraft`/`usage_counter`/`last_flight`), `age_hours` (`null` = feed never loaded; negative = timestamp in the future), `unit` (usage_counter only) |
 | `MANUALLY_EXCLUDED` | — |
+| `AIRCRAFT_TYPE_NOT_SELECTED` | `type_code` (FR-35 mission scope) |
+| `SQUADRON_NOT_SELECTED` | `squadron_code` (`null` when the aircraft has no squadron) |
 | `JEOPARDIZES_LATER_ASSIGNMENT` | `mission_id`, `mission_name`, `source`, `ref`, `unit`, `over_by` |
 
 ### 5.2 Warnings (eligible but noteworthy)

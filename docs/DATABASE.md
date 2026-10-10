@@ -43,12 +43,19 @@ CREATE TABLE aircraft_type (
   engine_count         SMALLINT NOT NULL CHECK (engine_count IN (1, 2, 3, 4)),
   max_endurance_hours  NUMERIC(5,2) NOT NULL,
   idle_limit_days      SMALLINT NOT NULL,               -- days without flight before idle check required
-  model_shape          VARCHAR(32) NOT NULL             -- 3D generator: SINGLE_PROP_LOW_WING | TWIN_TURBOPROP_HIGH_WING | TWIN_JET_LOW_WING
+  model_shape          VARCHAR(32) NOT NULL             -- 3D generator: SINGLE_PROP_LOW_WING | TWIN_TURBOPROP_HIGH_WING |
+                                                        --   TWIN_JET_LOW_WING | FIGHTER_SINGLE | FIGHTER_TWIN
 );
 
 CREATE TABLE base (
   base_code  VARCHAR(8) PRIMARY KEY,
   name_he    VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE squadron (                                -- טייסת (FR-35); view ao_v_squadron
+  squadron_code      VARCHAR(8) PRIMARY KEY,            -- 'SQ-11'
+  name_he            VARCHAR(60) NOT NULL,
+  base_code          VARCHAR(8) NOT NULL REFERENCES base
 );
 
 CREATE TABLE aircraft (
@@ -57,6 +64,7 @@ CREATE TABLE aircraft (
   serial_number      VARCHAR(32) NOT NULL,
   type_code          VARCHAR(16) NOT NULL REFERENCES aircraft_type,
   base_code          VARCHAR(8)  NOT NULL REFERENCES base,
+  squadron_code      VARCHAR(8) REFERENCES squadron,    -- NULL ⇒ excluded when a mission chooses squadrons
   status             VARCHAR(16) NOT NULL CHECK (status IN ('OPERATIONAL','IN_MAINTENANCE','GROUNDED','STORED')),
   manufacture_date   DATE NOT NULL,
   last_flight_at     TIMESTAMP WITH TIME ZONE,          -- landing time of last flight; NULL ⇒ DATA_MISSING for idle rule
@@ -275,6 +283,13 @@ CREATE TABLE mission (
   created_by               INTEGER NOT NULL REFERENCES app_user,
   created_at               TIMESTAMP WITH TIME ZONE NOT NULL,
   updated_at               TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE mission_scope (                           -- Alembic 0004; FR-35 (no rows of a kind = any)
+  mission_id  INTEGER NOT NULL REFERENCES mission ON DELETE CASCADE,
+  kind        VARCHAR(16) NOT NULL,                     -- SQUADRON | AIRCRAFT_TYPE
+  code        VARCHAR(16) NOT NULL,
+  PRIMARY KEY (mission_id, kind, code)
 );
 
 CREATE TABLE mission_qualification (

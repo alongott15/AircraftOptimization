@@ -130,8 +130,9 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
   date. Alerts: unit filter (unit-less safety alerts — grounding MAs, data issues, at-risk assignments — always shown).
 
 ### 6.3 Aircraft detail & 3D
-- **FR-20 (M)** Aircraft page with 3D model (procedural by type; engine count reflected — single nose engine vs.
-  two wing engines) rotating/zoomable; tail number rendered on the tail fin.
+- **FR-20 (M)** Aircraft page with a realistic 3D model (procedural by type — trainer, twin turboprop, business jet,
+  and F-16-like / F-15-like fighters in desert camouflage; engine count from data) rotating/zoomable; tail number
+  rendered on the tail fin(s). Settings shows a preview of every model.
 - **FR-21 (M)** Hotspots on the model per zone (nose, cockpit, fuselage, left/right wing, engine 1/2, nose/main
   landing gear, tail) showing open MAs mapped by ATA chapter → zone; colour by severity; click opens detail.
 - **FR-22 (M)** Side panel tabs: סקירה (overview), בדיקות (inspections, with remaining per limit), היתרים (permits),
@@ -151,6 +152,10 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
   force-exclude specific tails (force-include of an ineligible tail is rejected with reasons).
 - **FR-32 (M)** Validation in Hebrew (e.g. start in the past, aircraft count < 1, duration ≤ 0).
 - **FR-33 (S)** Save mission as draft; duplicate an existing mission.
+- **FR-35 (M)** Mission scope: the planner chooses one or more squadrons (טייסות) and/or aircraft types (דגמי מטוס)
+  for the mission (empty = any). Aircraft outside the scope are excluded with `SQUADRON_NOT_SELECTED` /
+  `AIRCRAFT_TYPE_NOT_SELECTED` (an aircraft with no squadron on record is never "in" a chosen squadron). The fleet list
+  shows and filters by squadron.
 - **FR-34 (S)** Expiration "avoid band" per mission, replacing the per-mission buffer fields of FR-31 (the admin
   policy buffers apply; only the ML duration-buffer suggestion of FR-52 can still raise a mission's FH buffer): one or
   more activity units, each with "תוך X ועד Y" in that same unit (days for calendar), counted after the mission.

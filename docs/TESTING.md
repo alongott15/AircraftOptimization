@@ -180,7 +180,10 @@ Backend (`backend/tests/`): `test_compliance_unit`, `test_property` (P1–P4, P6
 `test_api` (authz matrix, CSRF, validation, assignment safety, reason-code contract with `reasonCodes.ts`),
 `test_ml`, `test_horizon`, `test_oidc` (mocked IdP), `test_vertica_contract` (views on SQLite + real Vertica when
 `APP_VERTICA_DSN` is set; dirty-lake rows: NULL/NaN/unknown values must fail safe), `test_migrations` (no ORM/migration
-drift, downgrade clean), `test_openapi_snapshot`, `test_manage` (user CLI: hidden password, validation, audit). FR-14/34: band evaluation (same unit), unchanged
+drift, downgrade clean), `test_openapi_snapshot`, `test_manage` (user CLI: hidden password, validation, audit). FR-35 scope: unit (type/squadron/no squadron),
+API (stored, enforced with reasons, duplicated, validated, what-if, fleet squadron filter), E2E (form → excluded reasons).
+Frontend 3D: `procedural.test.ts` (every shape covers its zones, wheels on the ground, size within spec, no NaN),
+`zones.test.ts` (anchors, engine-count shape resolution). FR-14/34: band evaluation (same unit), unchanged
 scores without bands, eligibility invariance with bands (P3 property, optimize, horizon), unreadable stored bands,
 fleet band/unit filters (overdue and unknown never hidden), E2E form → warning → fleet popover filter. `test_api` keeps a route-coverage check: every authenticated route must
 appear in the authz matrix. Compliance regression tests cover the 2026-10-09 safety review (commitments since snapshot,

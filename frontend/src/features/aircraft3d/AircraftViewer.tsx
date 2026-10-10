@@ -12,11 +12,11 @@ import { useNames } from '../../components/results';
 import { formatNumber } from '../../i18n/format';
 import { t, tk } from '../../i18n';
 import { palette3d, toneVars } from '../../theme/tokens';
-import { AircraftModel, groundY } from './AircraftModel';
+import { AircraftModel, groundY, StudioLights } from './AircraftModel';
 import { Fallback2D } from './Fallback2D';
 import { hasWebGL } from './webgl';
 import { computeZones, type ZoneInfo } from './zoneStatus';
-import { specFor, zoneAnchors, type Zone, ZONES } from './zones';
+import { shapeFor, specFor, zoneAnchors, type Zone, ZONES } from './zones';
 
 type Preset = 'iso' | 'side' | 'top' | 'front';
 
@@ -67,7 +67,7 @@ export default function AircraftViewer({ detail, selectedZone, onSelectZone }: V
   const [nonce, setNonce] = useState(0);
   const [showHotspots, setShowHotspots] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
-  const shape = detail.model.model_shape;
+  const shape = shapeFor(detail.model.model_shape, detail.model.engine_count);
   const spec = specFor(shape);
   const zones = useMemo(() => computeZones(detail, names.inspection), [detail, names]);
   const anchors = useMemo(() => zoneAnchors(shape, detail.model.engine_count), [shape, detail.model.engine_count]);
@@ -162,20 +162,18 @@ export default function AircraftViewer({ detail, selectedZone, onSelectZone }: V
       <Canvas shadows dpr={[1, 2]} frameloop={pulse || autoRotate ? 'always' : 'demand'}
         camera={{ position: cameraFor('iso', spec.length), fov: 40, near: 0.1, far: 200 }}
         onPointerMissed={() => onSelectZone(null)}>
-        <hemisphereLight args={['#ffffff', '#6b7280', 0.9]} />
-        <directionalLight position={[8, 14, 6]} intensity={1.4} castShadow />
-        <directionalLight position={[-8, 6, -6]} intensity={0.4} />
-        <AircraftModel shape={shape} engineCount={detail.model.engine_count} zones={zones} selectedZone={selectedZone}
-          onSelect={select} outlineExpired={anyExpired} pulse={pulse} />
-        {[1, -1].map((side) => (
-          <Text3D key={side} font={tailFontUrl} fontSize={spec.finHeight * 0.22} color="#ffffff" anchorX="center" anchorY="middle"
-            position={[spec.finX - 0.05, spec.radius + spec.finHeight * 0.45, side * 0.075]} rotation={[0, side === 1 ? 0 : Math.PI, -0.3]}
-            outlineWidth={0.01} outlineColor={palette3d.accent}>
+        <StudioLights />
+        <AircraftModel shape={shape} zones={zones} selectedZone={selectedZone} onSelect={select}
+          outlineExpired={anyExpired} pulse={pulse} />
+        {spec.tailMarks.map((m) => (
+          <Text3D key={m.side} font={tailFontUrl} fontSize={m.size} color={spec.camo ? '#1D1D1B' : '#ffffff'}
+            anchorX="center" anchorY="middle" position={m.position} rotation={[0, m.side === 1 ? 0 : Math.PI, 0]}
+            outlineWidth={spec.camo ? 0 : 0.01} outlineColor={palette3d.accent}>
             {detail.tail_number}
           </Text3D>
         ))}
-        <Text3D font={tailFontUrl} fontSize={spec.radius * 0.38} color={palette3d.accent} anchorX="center" anchorY="middle"
-          position={[-spec.length * 0.12, spec.radius * 0.25, spec.radius + 0.01]}>
+        <Text3D font={tailFontUrl} fontSize={spec.registration.size} color={spec.camo ? '#2B2B2B' : palette3d.accent}
+          anchorX="center" anchorY="middle" position={spec.registration.position}>
           {detail.tail_number}
         </Text3D>
         {showHotspots && ZONES.map((zone) => {
@@ -193,7 +191,7 @@ export default function AircraftViewer({ detail, selectedZone, onSelectZone }: V
             </Html>
           );
         })}
-        <ContactShadows position={[0, groundY(shape), 0]} opacity={0.45} scale={spec.span * 1.6} blur={2.4} far={6} />
+        <ContactShadows position={[0, groundY(shape) + 0.002, 0]} opacity={0.55} scale={spec.span * 1.7} blur={2.2} far={6} />
         <OrbitControls makeDefault enableDamping autoRotate={autoRotate} autoRotateSpeed={0.8}
           minDistance={spec.length * 0.6} maxDistance={spec.length * 3} maxPolarAngle={Math.PI / 2 - 0.05} />
         <CameraRig preset={preset} length={spec.length} nonce={nonce} />

@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { AircraftDetail } from '../../api/types';
 import { computeZones, worstTone } from './zoneStatus';
-import { SHAPES, ZONES, zoneAnchors, zoneForAta, type Shape } from './zones';
+import { SHAPES, shapeFor, ZONES, zoneAnchors, zoneForAta, type Shape } from './zones';
 
 describe('zone anchors', () => {
   it.each(Object.keys(SHAPES) as Shape[])('%s has an anchor for every zone it can show', (shape) => {
-    const engines = shape === 'SINGLE_PROP_LOW_WING' ? 1 : 2;
+    const engines = SHAPES[shape].engines;
     const anchors = zoneAnchors(shape, engines);
     for (const zone of ZONES) {
       if (zone === 'ENGINE_2' && engines === 1) {
@@ -15,6 +15,15 @@ describe('zone anchors', () => {
         expect(anchors[zone], zone).toHaveLength(3);
       }
     }
+  });
+
+  it('draws the engine count from data, not from the shape name', () => {
+    expect(shapeFor('FIGHTER_TWIN', 2)).toBe('FIGHTER_TWIN');
+    expect(shapeFor('FIGHTER_TWIN', 1)).toBe('FIGHTER_SINGLE');
+    expect(shapeFor('TWIN_TURBOPROP_HIGH_WING', 1)).toBe('SINGLE_PROP_LOW_WING');
+    expect(shapeFor('TWIN_JET_LOW_WING', 1)).toBe('FIGHTER_SINGLE');
+    expect(shapeFor('NOT_A_SHAPE', 2)).toBe('TWIN_TURBOPROP_HIGH_WING');
+    expect(shapeFor(null, 1)).toBe('SINGLE_PROP_LOW_WING');
   });
 
   it('maps ATA chapters to zones', () => {

@@ -46,6 +46,7 @@ function Overview({ a }: { a: AircraftDetail }) {
       <SimpleGrid cols={2}>
         <Field label={t('field.type')} value={a.type_name_he} />
         <Field label={t('field.base')} value={baseName} />
+        <Field label={t('field.squadron')} value={a.squadron_code ? names.squadron(a.squadron_code) : t('common.dash')} />
         <Field label={t('field.serial')} value={<Ltr>{a.serial_number}</Ltr>} />
         <Field label={t('field.manufactured')} value={<Ltr>{a.manufacture_date.slice(0, 4)}</Ltr>} />
         <Field label={t('field.engines')} value={a.engine_count} />

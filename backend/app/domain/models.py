@@ -219,6 +219,7 @@ class Aircraft:
     commitments: tuple[CommittedMission, ...] = ()
     # (item_kind, item_code) rows the adapter could not read (unknown type, bad enum …) ⇒ DATA_MISSING (S1)
     data_issues: tuple[tuple[str, str], ...] = ()
+    squadron_code: str | None = None
 
     def counter(self, unit: Unit) -> Counter | None:
         return self.counters.get(unit)
@@ -273,6 +274,9 @@ class MissionRequest:
     force_exclude: frozenset[str] = frozenset()
     mission_id: int | None = None
     expiry_windows: tuple[ExpiryWindow, ...] = ()
+    # Planner's mission scope (empty = any): only aircraft of these squadrons / types are candidates
+    squadron_codes: frozenset[str] = frozenset()
+    type_codes: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)

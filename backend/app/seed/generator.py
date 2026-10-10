@@ -48,6 +48,12 @@ PROFILES = {
     "JT-300": TypeProfile(0.35, 3.5, (("TRANSPORT", 0.8), ("FERRY", 0.2)), (3000, 15000), 0.0),
 }
 
+def squadron_of(type_code: str, base_code: str) -> str:
+    """Demo squadrons: trainers by base, turboprops by base, all jets in one squadron."""
+    return {("SE-100", "NTH"): "SQ-11", ("SE-100", "CEN"): "SQ-12", ("TP-200", "CEN"): "SQ-21",
+            ("TP-200", "STH"): "SQ-22"}.get((type_code, base_code), "SQ-31")
+
+
 FLEET: list[tuple[str, str, str]] = (
     [(f"4X-S0{i}", "SE-100", "NTH" if i <= 4 else "CEN") for i in range(1, 9)]
     + [(f"4X-P{i:02d}", "TP-200", "CEN" if i <= 5 else "STH") for i in range(1, 11)]
@@ -110,6 +116,7 @@ class Generator:
         self._add(*[orm.AircraftTypeRow(type_code=t, name_he=n, engine_count=e, max_endurance_hours=h,
                                         idle_limit_days=i, model_shape=m) for t, n, e, h, i, m in ref.AIRCRAFT_TYPES])
         self._add(*[orm.BaseRow(base_code=c, name_he=n) for c, n in ref.BASES])
+        self._add(*[orm.SquadronRow(squadron_code=c, name_he=n, base_code=b) for c, n, b in ref.SQUADRONS])
         self._add(*[orm.ActivityUnitRow(unit_code=c, name_he=n, short_he=s, kind=k)
                     for c, n, s, k in ref.ACTIVITY_UNITS])
         self._add(*[orm.QualificationRow(qualification_code=c, name_he=n) for c, n in ref.QUALIFICATIONS])
@@ -133,7 +140,7 @@ class Generator:
             age_years = self.rng.uniform(3, 18)
             row = orm.AircraftRow(
                 aircraft_id=idx, tail_number=tail, serial_number=f"{type_code.replace('-', '')}-{idx:04d}",
-                type_code=type_code, base_code=base, status="OPERATIONAL",
+                type_code=type_code, base_code=base, squadron_code=squadron_of(type_code, base), status="OPERATIONAL",
                 manufacture_date=(self.t0 - timedelta(days=365 * age_years)).date(),
                 last_flight_at=None, source_updated_at=self.t0)
             self.s.add(row)

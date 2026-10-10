@@ -11,6 +11,7 @@ SELECT CAST(NULL AS INTEGER)       AS aircraft_id,
        CAST(NULL AS VARCHAR(32))   AS serial_number,
        CAST(NULL AS VARCHAR(16))   AS type_code,
        CAST(NULL AS VARCHAR(8))    AS base_code,
+       CAST(NULL AS VARCHAR(8))    AS squadron_code,     -- ao_v_squadron; NULL ⇒ excluded when a mission picks squadrons
        CAST(NULL AS VARCHAR(16))   AS status,            -- OPERATIONAL | IN_MAINTENANCE | GROUNDED | STORED
        CAST(NULL AS DATE)          AS manufacture_date,
        CAST(NULL AS TIMESTAMPTZ)   AS last_flight_at,
@@ -18,7 +19,7 @@ SELECT CAST(NULL AS INTEGER)       AS aircraft_id,
 WHERE FALSE;
 
 -- Same pattern for the remaining views (columns as in DATABASE.md §3):
---   ao_v_aircraft_type, ao_v_base, ao_v_activity_unit, ao_v_usage_counter, ao_v_flight_log,
+--   ao_v_aircraft_type, ao_v_base, ao_v_squadron (squadron_code, name_he, base_code), ao_v_activity_unit, ao_v_usage_counter, ao_v_flight_log,
 --   ao_v_qualification, ao_v_aircraft_qualification, ao_v_zone, ao_v_ata_zone_map,
 --   ao_v_inspection_type, ao_v_inspection_limit, ao_v_aircraft_inspection_due, ao_v_inspection_event,
 --   ao_v_permit_type, ao_v_aircraft_permit, ao_v_maintenance_action, ao_v_data_load_status

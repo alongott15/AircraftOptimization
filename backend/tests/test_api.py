@@ -518,3 +518,71 @@ def test_band_filter_never_hides_stale_unreadable_or_expired() -> None:
     assert band.matches(aircraft_status(unreadable, p, ctx()))
     expired = an_aircraft().remaining("I100H", Unit.FH, -3.0).build()
     assert BandFilter((("FH", 10.0, 50.0),)).matches(aircraft_status(expired, p, ctx()))
+
+
+def test_mission_scope_by_squadron_and_type(client: TestClient) -> None:
+    headers = login(client, "planner")
+    ref = client.get("/api/v1/reference", headers=headers).json()
+    assert {s["squadron_code"] for s in ref["squadrons"]} >= {"SQ-11", "SQ-12"}
+    scoped = {**M_A, "squadron_codes": ["SQ-11"], "aircraft_type_codes": ["SE-100"]}
+    mission = client.post("/api/v1/missions", json=scoped, headers=headers).json()
+    assert mission["squadron_codes"] == ["SQ-11"] and mission["aircraft_type_codes"] == ["SE-100"]
+    run = client.post(f"/api/v1/missions/{mission['mission_id']}/optimize", json={}, headers=headers).json()
+    squadron_of = {a["tail_number"]: a["squadron_code"] for a in client.get(
+        "/api/v1/aircraft", params={"page_size": 200}, headers=headers).json()["items"]}
+    eligible = {c["tail_number"] for c in run["candidates"] if c["eligible"]}
+    assert eligible and all(squadron_of[t] == "SQ-11" for t in eligible)  # golden M-A ∩ SQ-11 = S01, S02, S04
+    assert eligible == {"4X-S01", "4X-S02", "4X-S04"}
+    s06 = next(c for c in run["candidates"] if c["tail_number"] == "4X-S06")  # eligible for M-A, but in SQ-12
+    assert [r["code"] for r in s06["reasons"]] == ["SQUADRON_NOT_SELECTED"]
+    copy = client.post(f"/api/v1/missions/{mission['mission_id']}/duplicate", headers=headers).json()
+    assert copy["squadron_codes"] == ["SQ-11"] and copy["aircraft_type_codes"] == ["SE-100"]
+    for field, code in (("squadron_codes", "UNKNOWN_SQUADRON"), ("aircraft_type_codes", "UNKNOWN_TYPE")):
+        bad = client.post("/api/v1/missions", json={**M_A, field: ["NOPE"]}, headers=headers)
+        assert bad.status_code == 422 and bad.json()["errors"][0]["code"] == code
+    what_if = client.post("/api/v1/eligibility/check", json={"mission": scoped, "tail_numbers": ["4X-S06"]},
+                          headers=headers).json()
+    assert [r["code"] for r in what_if[0]["reasons"]] == ["SQUADRON_NOT_SELECTED"]
+    sq = client.get("/api/v1/aircraft", params={"page_size": 200, "squadron_code": "SQ-22"}, headers=headers).json()
+    assert {a["tail_number"] for a in sq["items"]} == {f"4X-P{i:02d}" for i in range(6, 11)}
+
+
+def test_mission_scope_safety_paths(client: TestClient) -> None:
+    headers = login(client, "planner")
+    # force-including an out-of-scope tail is rejected with its reasons
+    forced = client.post("/api/v1/missions", json={**M_A, "squadron_codes": ["SQ-11"], "force_include": ["4X-S06"]},
+                         headers=headers).json()
+    r = client.post(f"/api/v1/missions/{forced['mission_id']}/optimize", json={}, headers=headers)
+    assert r.status_code == 422 and r.json()["code"] == "FORCE_INCLUDE_INELIGIBLE"
+    assert "SQUADRON_NOT_SELECTED" in {x["code"] for x in r.json()["reasons"]["4X-S06"]}
+    # narrowing the scope after a run invalidates assigning that run's set
+    mission = client.post("/api/v1/missions", json=M_A, headers=headers).json()
+    run = client.post(f"/api/v1/missions/{mission['mission_id']}/optimize", json={}, headers=headers).json()
+    patched = client.patch(f"/api/v1/missions/{mission['mission_id']}", json={**M_A, "squadron_codes": ["SQ-22"]},
+                           headers=headers)
+    assert patched.status_code == 200
+    assign = client.post(f"/api/v1/missions/{mission['mission_id']}/assign",
+                         json={"run_id": run["run_id"], "set_index": 0}, headers=headers)
+    assert assign.status_code == 409 and assign.json()["code"] == "ELIGIBILITY_CHANGED"
+    # what-if validates codes like saving does
+    bad = client.post("/api/v1/eligibility/check", json={"mission": {**M_A, "squadron_codes": ["NOPE"]}}, headers=headers)
+    assert bad.status_code == 422 and bad.json()["errors"][0]["code"] == "UNKNOWN_SQUADRON"
+    # out-of-scope aircraft are never offered as "nearest to eligible"
+    short = client.post("/api/v1/missions", json={**M_A, "required_aircraft_count": 4, "squadron_codes": ["SQ-11"]},
+                        headers=headers).json()
+    run2 = client.post(f"/api/v1/missions/{short['mission_id']}/optimize", json={}, headers=headers).json()
+    assert run2["shortfall"] > 0
+    in_scope = {c["aircraft_id"] for c in run2["candidates"]
+                if not {x["code"] for x in c["reasons"]} & {"SQUADRON_NOT_SELECTED", "AIRCRAFT_TYPE_NOT_SELECTED"}}
+    assert set(run2["nearest_to_eligible"]) <= in_scope
+
+
+def test_unknown_scope_kind_restricts_to_nothing(client: TestClient) -> None:
+    headers = login(client, "planner")
+    mid = client.post("/api/v1/missions", json=M_A, headers=headers).json()["mission_id"]
+    c = client.app.state.container  # type: ignore[attr-defined]
+    with c.sf() as s:
+        s.execute(text("INSERT INTO mission_scope (mission_id, kind, code) VALUES (:m, 'BOGUS', 'X')"), {"m": mid})
+        s.commit()
+    run = client.post(f"/api/v1/missions/{mid}/optimize", json={}, headers=headers).json()
+    assert not any(c["eligible"] for c in run["candidates"])  # never silently "any"

@@ -672,6 +672,8 @@ export interface components {
             engine_count: number;
             /** Base Code */
             base_code: string;
+            /** Squadron Code */
+            squadron_code: string | null;
             /** Operational Status */
             operational_status: string;
             /** Derived Status */
@@ -733,6 +735,8 @@ export interface components {
             engine_count: number;
             /** Base Code */
             base_code: string;
+            /** Squadron Code */
+            squadron_code: string | null;
             /** Operational Status */
             operational_status: string;
             /** Derived Status */
@@ -1239,6 +1243,10 @@ export interface components {
             overrides?: components["schemas"]["MissionOverridesIn"];
             /** Expiry Windows */
             expiry_windows?: components["schemas"]["ExpiryWindowIn"][];
+            /** Squadron Codes */
+            squadron_codes?: string[];
+            /** Aircraft Type Codes */
+            aircraft_type_codes?: string[];
         };
         /** MissionOut */
         MissionOut: {
@@ -1295,6 +1303,10 @@ export interface components {
             };
             /** Expiry Windows */
             expiry_windows: components["schemas"]["ExpiryWindowOut"][];
+            /** Squadron Codes */
+            squadron_codes: string[];
+            /** Aircraft Type Codes */
+            aircraft_type_codes: string[];
             /** Created By */
             created_by: number;
             /** Created At */
@@ -1563,6 +1575,10 @@ export interface components {
             }[];
             /** Bases */
             bases: {
+                [key: string]: unknown;
+            }[];
+            /** Squadrons */
+            squadrons: {
                 [key: string]: unknown;
             }[];
             /** Qualifications */
@@ -2112,6 +2128,7 @@ export interface operations {
                 page?: number;
                 page_size?: number;
                 expiry?: string | null;
+                squadron_code?: string | null;
             };
             header?: never;
             path?: never;

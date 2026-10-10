@@ -39,7 +39,8 @@ export function computeZones(
     info.tone = worstTone(info.tone, item.tone);
   };
   for (const ma of detail.maintenance_actions) {
-    const zone = (ma.zone_code as Zone | null) ?? zoneForAta(ma.ata_chapter) ?? 'FUSELAGE';
+    const known = ma.zone_code && (ZONES as readonly string[]).includes(ma.zone_code) ? (ma.zone_code as Zone) : null;
+    const zone = known ?? zoneForAta(ma.ata_chapter) ?? 'FUSELAGE';
     let tone = maTone(ma.severity);
     if (ma.deferral?.status === 'EXPIRED') tone = 'EXPIRED';
     add(zone, { kind: 'MA', ref: ma.ma_number, label: ma.title, tone, detail: ma.severity });
@@ -47,6 +48,7 @@ export function computeZones(
   for (const ins of detail.inspections) {
     if (!ins.zone_code || ins.status === 'OK') continue;
     const tone: Tone = ins.status === 'EXPIRED' ? 'EXPIRED' : ins.status === 'UNKNOWN' ? 'UNKNOWN' : 'EXPIRING_SOON';
+    if (!(ZONES as readonly string[]).includes(ins.zone_code)) continue;  // unknown zone: listed in the side panel only
     const zones: Zone[] = ins.zone_code === 'ENGINE_1' ? engines : [ins.zone_code as Zone];
     for (const z of zones) {
       add(z, { kind: 'INSPECTION', ref: ins.inspection_code, label: inspectionName(ins.inspection_code), tone });

@@ -14,6 +14,8 @@ export interface Names {
   qualification: (code: unknown) => string;
   unit: (code: unknown) => string;
   zone: (code: unknown) => string;
+  type: (code: unknown) => string;
+  squadron: (code: unknown) => string;
   ref: (source: unknown, ref: unknown) => string;
 }
 
@@ -30,7 +32,11 @@ export function makeNames(ref?: Reference): Names {
   const permits = map(ref?.permit_types, 'permit_type_code', 'name_he');
   const quals = map(ref?.qualifications, 'qualification_code', 'name_he');
   const units = map(ref?.activity_units, 'unit_code', 'short_he');
+  const types = map(ref?.aircraft_types, 'type_code', 'name_he');
+  const squadrons = map(ref?.squadrons, 'squadron_code', 'name_he');
   const names: Names = {
+    type: (c) => types.get(s(c)) ?? s(c),
+    squadron: (c) => squadrons.get(s(c)) ?? s(c),
     inspection: (c) => inspections.get(s(c)) ?? s(c),
     permit: (c) => permits.get(s(c)) ?? s(c),
     qualification: (c) => quals.get(s(c)) ?? s(c),
@@ -71,6 +77,11 @@ export const REASON_TEMPLATES: Record<string, Template> = {
     `המטוס כבר משובץ למשימה "${s(p.mission_name)}" (${d(p.window_start)}–${d(p.window_end)})`,
   ENGINE_REQUIREMENT_NOT_MET: (p) =>
     `דרישת מנועים לא מתקיימת: נדרש ${tk(`engineReq.${s(p.required)}`)}, למטוס ${s(p.actual)} מנועים`,
+  AIRCRAFT_TYPE_NOT_SELECTED: (p, nm) => `הדגם (${nm.type(p.type_code)}) אינו בין הדגמים שנבחרו למשימה`,
+  SQUADRON_NOT_SELECTED: (p, nm) =>
+    p.squadron_code
+      ? `המטוס משויך ל${nm.squadron(p.squadron_code)}, שאינה בין הטייסות שנבחרו למשימה`
+      : 'המטוס אינו משויך לאף טייסת, ולכן אינו בין הטייסות שנבחרו למשימה',
   ENDURANCE_EXCEEDED: (p) =>
     `משך הטיסה כולל מרווח (${n(p.required_hours, 2)} ש׳) חורג מזמן השהייה המרבי באוויר (${n(p.max_hours)} ש׳)`,
   GROUNDING_MA_OPEN: (p, nm) => `פעולת תחזוקה מקרקעת פתוחה: ${ltr(s(p.ma_number))} (${nm.zone(p.zone_code)})`,

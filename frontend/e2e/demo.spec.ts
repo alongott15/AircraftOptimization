@@ -213,3 +213,36 @@ test('expiration bands "תוך … ועד …" per activity unit: ranking warnin
   await expect(page.getByTestId('fleet-table')).toContainText('4X-P06');  // SC-16: annual due in 3 days
   await expect(page.getByTestId('fleet-table')).not.toContainText('4X-J01');
 });
+
+test('mission scope: choose squadrons and aircraft types (FR-35)', async ({ page }) => {
+  await login(page, 'planner');
+  await page.goto('/missions/new');
+  await page.getByTestId('mission-name').fill('אימון לילה — טייסת 11');
+  await page.getByTestId('mission-count').fill('2');
+  await page.getByTestId('mission-squadrons').click();
+  await page.getByRole('option', { name: 'טייסת 11 — אימון צפון' }).click();
+  await page.keyboard.press('Escape');
+  await page.getByTestId('mission-types').click();
+  await page.getByRole('option', { name: 'מטוס אימון חד-מנועי' }).click();
+  await page.keyboard.press('Escape');
+  await page.getByTestId('mission-quals').click();
+  await page.getByRole('option', { name: 'טיסת לילה' }).click();
+  await page.keyboard.press('Escape');
+  await page.getByText('חד-מנועי', { exact: true }).click();
+  await page.getByTestId('mission-start').fill('2026-01-15T22:00');  // after the M-A test's assignment window
+  await page.getByTestId('mission-duration').fill('2.5');
+  await page.getByTestId('mission-tg').fill('6');
+  await page.getByTestId('mission-base').click();
+  await page.getByRole('option', { name: 'בסיס צפון' }).click();
+  await page.getByTestId('optimize-btn').click();
+  await expect(page.getByTestId('mission-status')).toBeVisible();
+  // golden M-A eligible = S01, S02, S04, S06; squadron 11 keeps S01, S02, S04 (S06 is in squadron 12)
+  await expect(page.getByTestId('result-summary')).toContainText('נבחרו 2 מתוך 3 מטוסים כשירים');
+  const s06 = page.locator('[data-testid="excluded-list"] [data-tail="4X-S06"]');
+  await s06.getByRole('button').first().click();
+  await expect(s06).toContainText('שאינה בין הטייסות שנבחרו למשימה');
+  const p01 = page.locator('[data-testid="excluded-list"] [data-tail="4X-P01"]');
+  await p01.getByRole('button').first().click();
+  await expect(p01).toContainText('אינו בין הדגמים שנבחרו למשימה');
+  expect(await latinOutsideBdi(page)).toEqual([]);
+});

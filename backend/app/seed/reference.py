@@ -11,6 +11,15 @@ AIRCRAFT_TYPES = [
 
 BASES = [("NTH", "בסיס צפון"), ("CEN", "בסיס מרכז"), ("STH", "בסיס דרום")]
 
+# (squadron_code, name_he, base_code) — demo squadrons (טייסות)
+SQUADRONS = [
+    ("SQ-11", "טייסת 11 — אימון צפון", "NTH"),
+    ("SQ-12", "טייסת 12 — אימון מרכז", "CEN"),
+    ("SQ-21", "טייסת 21 — תובלה מרכז", "CEN"),
+    ("SQ-22", "טייסת 22 — תובלה דרום", "STH"),
+    ("SQ-31", "טייסת 31 — סילון", "CEN"),
+]
+
 ACTIVITY_UNITS = [
     ("FH", "שעות טיסה", "ש״ט", "COUNTER"),
     ("LDG", "נחיתות", "נח׳", "COUNTER"),

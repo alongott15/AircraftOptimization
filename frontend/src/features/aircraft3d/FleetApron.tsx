@@ -6,15 +6,15 @@ import { useMemo } from 'react';
 import type { AircraftSummary } from '../../api/types';
 import { t, tk } from '../../i18n';
 import { palette3d } from '../../theme/tokens';
-import { AircraftModel } from './AircraftModel';
+import { AircraftModel, StudioLights } from './AircraftModel';
 import type { ZoneInfo } from './zoneStatus';
-import { specFor, type Zone, ZONES } from './zones';
+import { shapeFor, specFor, type Zone, ZONES } from './zones';
 
-const HULL_BY_STATUS: Record<string, string> = {
+// Tint by compliance status; OK keeps the real livery/camouflage.
+const HULL_BY_STATUS: Record<string, string | undefined> = {
   EXPIRED: '#F3A6A0',
   EXPIRING_SOON: '#F8D48A',
   UNKNOWN: '#9AA5B5',
-  OK: palette3d.hull,
 };
 const EMPTY_ZONES = Object.fromEntries(
   ZONES.map((z): [Zone, ZoneInfo] => [z, { tone: null, items: [] }]),
@@ -39,8 +39,7 @@ export default function FleetApron({ aircraft, shapes, bases, onOpen }: Props) {
   return (
     <div className="ao-viewer" style={{ height: 620 }} data-testid="fleet-apron" role="img" aria-label={t('fleet3d.title')}>
       <Canvas dpr={[1, 2]} frameloop="demand" camera={{ position: [0, 26, 30], fov: 40 }}>
-        <hemisphereLight args={['#ffffff', '#6b7280', 0.9]} />
-        <directionalLight position={[10, 20, 8]} intensity={1.3} />
+        <StudioLights shadows={false} />
         {bases.map((b, r) => (
           <Html key={b.base_code} position={[-30, 0, (r - (bases.length - 1) / 2) * 6.5]} center zIndexRange={[5, 0]}>
             <div className="ao-info-card" style={{ fontWeight: 700 }}>{b.name_he}</div>
@@ -48,17 +47,17 @@ export default function FleetApron({ aircraft, shapes, bases, onOpen }: Props) {
         ))}
         {layout.map(({ a, pos }) => {
           const status = a.derived_status === 'GROUNDED' ? 'EXPIRED' : a.compliance_status;
-          const shape = shapes[a.type_code] ?? 'TWIN_TURBOPROP_HIGH_WING';
+          const shape = shapeFor(shapes[a.type_code], a.engine_count);
           const spec = specFor(shape);
           return (
             <group key={a.aircraft_id} position={pos} rotation={[0, Math.PI / 2, 0]}
               onClick={(e) => { e.stopPropagation(); onOpen(a.tail_number); }}
               onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
               onPointerOut={() => { document.body.style.cursor = ''; }}>
-              <group scale={[SCALE, SCALE, SCALE]} position={[0, (spec.radius + spec.gearHeight) * SCALE, 0]}>
-                <AircraftModel shape={shape} engineCount={a.engine_count} zones={EMPTY_ZONES} selectedZone={null}
+              <group scale={[SCALE, SCALE, SCALE]} position={[0, -spec.groundY * SCALE, 0]}>
+                <AircraftModel shape={shape} zones={EMPTY_ZONES} selectedZone={null} lite
                   onSelect={() => onOpen(a.tail_number)} outlineExpired={status === 'EXPIRED'} pulse={false}
-                  hullColor={HULL_BY_STATUS[status] ?? palette3d.hull} />
+                  hullColor={HULL_BY_STATUS[status]} />
               </group>
               <Html position={[0, 2.6, 0]} center zIndexRange={[5, 0]}>
                 <button type="button" className="ao-hotspot" data-tail={a.tail_number} data-status={status}

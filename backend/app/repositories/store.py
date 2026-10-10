@@ -130,6 +130,29 @@ def mission_qualifications(s: Session, mission_id: int) -> list[str]:
     return sorted(rows)
 
 
+SCOPE_SQUADRON, SCOPE_TYPE, SCOPE_INVALID = "SQUADRON", "AIRCRAFT_TYPE", "?"
+
+
+def mission_scope(s: Session, mission_id: int) -> tuple[list[str], list[str]]:
+    """(squadron codes, aircraft type codes) chosen for the mission; empty lists = any."""
+    rows = list(s.scalars(select(orm.MissionScopeRow).where(orm.MissionScopeRow.mission_id == mission_id)))
+    if any(r.kind not in (SCOPE_SQUADRON, SCOPE_TYPE) for r in rows):
+        # an unreadable scope must never read as "any": restrict to nothing (every aircraft gets a reason)
+        _log.warning("mission_scope.unknown_kind", extra={"mission_id": mission_id})
+        return [SCOPE_INVALID], [SCOPE_INVALID]
+    return (sorted(r.code for r in rows if r.kind == SCOPE_SQUADRON),
+            sorted(r.code for r in rows if r.kind == SCOPE_TYPE))
+
+
+def replace_mission_scope(s: Session, mission_id: int, squadrons: list[str], types: list[str]) -> None:
+    for r in s.scalars(select(orm.MissionScopeRow).where(orm.MissionScopeRow.mission_id == mission_id)):
+        s.delete(r)
+    s.flush()
+    for kind, codes in ((SCOPE_SQUADRON, squadrons), (SCOPE_TYPE, types)):
+        for code in sorted(set(codes)):
+            s.add(orm.MissionScopeRow(mission_id=mission_id, kind=kind, code=code))
+
+
 def mission_forces(s: Session, mission_id: int) -> list[orm.MissionForceRow]:
     return list(s.scalars(select(orm.MissionForceRow).where(orm.MissionForceRow.mission_id == mission_id)))
 

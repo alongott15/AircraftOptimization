@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Grid, Group, NumberInput, ScrollArea, SegmentedControl, Select, Stack, Table, Text, Title } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconLock } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 
 import {
   useHangar, useModels, usePolicy, useReference, useRetrain, useSaveHangar, useSaveTgWeights, useSaveWeights,
@@ -12,6 +12,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { ErrorState, LoadingState, Ltr, errorMessage } from '../components/common';
 import { formatDateTime } from '../i18n/format';
 import { makeNames } from '../i18n/reasonCodes';
+import { hasWebGL } from '../features/aircraft3d/webgl';
 import { t, tk } from '../i18n';
 
 const NUMERIC_FIELDS: (keyof Policy)[] = [
@@ -315,6 +316,22 @@ function ModelsCard({ editable }: { editable: boolean }) {
   );
 }
 
+const ModelPreview = lazy(() => import('../features/aircraft3d/ModelPreview'));
+
+function ModelsPreviewCard() {
+  return (
+    <Card data-testid="models-3d-card">
+      <Title order={4} mb={4}>{t('settings.models3d')}</Title>
+      <Text size="sm" c="dimmed" mb="sm">{t('settings.models3dHint')}</Text>
+      {hasWebGL() ? (
+        <Suspense fallback={<LoadingState />}><ModelPreview /></Suspense>
+      ) : (
+        <Text size="sm">{t('viewer.fallback')}</Text>
+      )}
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const { can } = useAuth();
   const editable = can('ADMIN');
@@ -327,6 +344,7 @@ export default function SettingsPage() {
       <TgWeightsCard editable={editable} />
       <HangarCard editable={editable} />
       <ModelsCard editable={editable} />
+      <ModelsPreviewCard />
     </Stack>
   );
 }

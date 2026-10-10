@@ -192,6 +192,11 @@ def evaluate_eligibility(
     if not engine_ok(m.engine_requirement, engines):
         reasons.append(Reason(ReasonCode.ENGINE_REQUIREMENT_NOT_MET,
                               {"required": str(m.engine_requirement), "actual": engines}))
+    # R3b mission scope chosen by the planner (FR-35): aircraft types and squadrons (empty = any)
+    if m.type_codes and ac.aircraft_type.type_code not in m.type_codes:
+        reasons.append(Reason(ReasonCode.AIRCRAFT_TYPE_NOT_SELECTED, {"type_code": ac.aircraft_type.type_code}))
+    if m.squadron_codes and ac.squadron_code not in m.squadron_codes:  # no squadron on record ⇒ not selected
+        reasons.append(Reason(ReasonCode.SQUADRON_NOT_SELECTED, {"squadron_code": ac.squadron_code}))
     # R4 endurance (an unreadable endurance is missing data, never "enough")
     needed = buffered_hours(m.duration_hours, policy)
     if not math.isfinite(ac.aircraft_type.max_endurance_hours):

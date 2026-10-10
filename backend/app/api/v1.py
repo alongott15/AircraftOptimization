@@ -272,14 +272,15 @@ def list_aircraft(_: Viewer, c: ContainerDep, s: SessionDep, type_code: str | No
                   qualification_code: str | None = None, q: Annotated[str | None, Query(max_length=16)] = None,
                   sort: str = "compliance_status", page: Annotated[int, Query(ge=1)] = 1,
                   page_size: Annotated[int, Query(ge=1, le=200)] = 50,
-                  expiry: Annotated[str | None, Query(max_length=200)] = None) -> dict[str, Any]:
+                  expiry: Annotated[str | None, Query(max_length=200)] = None,
+                  squadron_code: str | None = None) -> dict[str, Any]:
     fc = load_context(c, s)
     risks = c.ml.predict_risk(fc.aircraft, fc.now)
     statuses = [x.strip() for x in compliance_status.split(",")] if compliance_status else None
     bands = _bands(expiry) if expiry else None  # FR-14: per-unit "תוך … ועד …" bands
     rows = fleet.list_aircraft(fc, risks, type_code=type_code, base_code=base_code, status=status,
                                compliance_status=statuses, qualification_code=qualification_code, q=q, sort=sort,
-                               expiry=bands)
+                               expiry=bands, squadron_code=squadron_code)
     return _page(rows, page, page_size)
 
 
@@ -414,13 +415,15 @@ def unassign(mission_id: int, request: Request, user: Planner, c: ContainerDep, 
 @router.post("/eligibility/check", response_model=list[CandidateOut], tags=["optimization"])
 def eligibility_check(body: EligibilityCheckIn, _: WhatIf, c: ContainerDep, s: SessionDep) -> list[dict[str, Any]]:
     mi = body.mission
+    missions.validate_codes(mi.model_dump(), c.ds.load_reference())  # same 422s as saving a mission
     mission = MissionRequest(
         name=mi.name, mission_type=MissionType(mi.mission_type), required_count=mi.required_aircraft_count,
         start_at=mi.start_at, duration_hours=mi.est_duration_hours, landings=mi.est_landings,
         touch_and_goes=mi.est_touch_and_goes, engine_starts=mi.est_engine_starts,
         departure_base_code=mi.departure_base_code, required_qualifications=frozenset(mi.required_qualifications),
         engine_requirement=EngineRequirement(mi.engine_requirement), same_type_required=mi.same_type_required,
-        force_include=frozenset(mi.force_include), force_exclude=frozenset(mi.force_exclude))
+        force_include=frozenset(mi.force_include), force_exclude=frozenset(mi.force_exclude),
+        squadron_codes=frozenset(mi.squadron_codes), type_codes=frozenset(mi.aircraft_type_codes))
     return optimization.eligibility_check(c, s, mission, body.tail_numbers, mi.overrides.model_dump())
 
 

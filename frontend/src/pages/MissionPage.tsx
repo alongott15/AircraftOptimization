@@ -47,6 +47,8 @@ function MissionSummary({ m }: { m: Mission }) {
     [t('field.departureBase'), base],
     [t('field.engineRequirement'), tk(`engineReq.${m.engine_requirement}`)],
     [t('field.qualifications'), m.required_qualifications.map((q) => names.qualification(q)).join(', ') || t('common.none')],
+    [t('field.squadrons'), m.squadron_codes.map((q) => names.squadron(q)).join(', ') || t('mission.anySquadron')],
+    [t('field.aircraftTypes'), m.aircraft_type_codes.map((q) => names.type(q)).join(', ') || t('mission.anyType')],
   ];
   return (
     <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="sm">

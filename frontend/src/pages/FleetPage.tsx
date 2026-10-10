@@ -11,7 +11,7 @@ import { OpStatusBadge, RiskBadge, StatusBadge } from '../components/StatusBadge
 import { t, tk } from '../i18n';
 
 const FILTER_KEYS = [
-  'type_code', 'base_code', 'status', 'compliance_status', 'qualification_code', 'q',
+  'type_code', 'base_code', 'squadron_code', 'status', 'compliance_status', 'qualification_code', 'q',
   'expiry',  // FR-14: per-unit "תוך … ועד …" bands, e.g. FH:0:50,CAL_DAY:0:7
 ] as const;
 
@@ -64,6 +64,8 @@ export function FleetPage() {
   const ref = reference.data;
   const typeName = (code: string) => ref?.aircraft_types.find((x) => x.type_code === code)?.name_he?.toString() ?? code;
   const baseName = (code: string) => ref?.bases.find((x) => x.base_code === code)?.name_he?.toString() ?? code;
+  const squadronName = (code: string) =>
+    ref?.squadrons.find((x) => x.squadron_code === code)?.name_he?.toString() ?? code;
 
   return (
     <Stack mt="md">
@@ -86,6 +88,9 @@ export function FleetPage() {
           <Select label={t('field.base')} clearable w={150} value={params.get('base_code')}
             data={(ref?.bases ?? []).map((x) => ({ value: String(x.base_code), label: String(x.name_he) }))}
             onChange={(v) => setFilter('base_code', v)} />
+          <Select label={t('field.squadron')} clearable w={210} value={params.get('squadron_code')}
+            data={(ref?.squadrons ?? []).map((x) => ({ value: String(x.squadron_code), label: String(x.name_he) }))}
+            onChange={(v) => setFilter('squadron_code', v)} data-testid="filter-squadron" />
           <Select label={t('field.status')} clearable w={150} value={params.get('status')}
             data={['OPERATIONAL', 'GROUNDED', 'IN_MAINTENANCE', 'STORED'].map((v) => ({ value: v, label: tk(`opStatus.${v}`) }))}
             onChange={(v) => setFilter('status', v)} />
@@ -111,6 +116,7 @@ export function FleetPage() {
                   <Table.Th>{t('field.type')}</Table.Th>
                   <Table.Th>{t('field.engines')}</Table.Th>
                   <Table.Th>{t('field.base')}</Table.Th>
+                  <Table.Th>{t('field.squadron')}</Table.Th>
                   <Table.Th>{t('field.status')}</Table.Th>
                   <Table.Th>{t('field.compliance')}</Table.Th>
                   <Table.Th>{t('field.nextDue')}</Table.Th>
@@ -126,6 +132,7 @@ export function FleetPage() {
                     <Table.Td>{typeName(a.type_code)}</Table.Td>
                     <Table.Td className="ao-num">{a.engine_count}</Table.Td>
                     <Table.Td>{baseName(a.base_code)}</Table.Td>
+                    <Table.Td>{a.squadron_code ? squadronName(a.squadron_code) : t('common.dash')}</Table.Td>
                     <Table.Td><OpStatusBadge status={a.derived_status} size="sm" /></Table.Td>
                     <Table.Td>
                       <StatusBadge status={a.compliance_status} size="sm"

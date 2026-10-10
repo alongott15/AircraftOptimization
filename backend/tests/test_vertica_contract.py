@@ -146,7 +146,9 @@ def test_dirty_lake_rows_fail_safe(dirty_db: Path) -> None:
                                              status="SUSPENDED"),
         "permit_type": lambda rows: _set(rows, {"permit_type_code": "INSURANCE"}, is_grounding=None, is_required=None),
         "aircraft": lambda rows: (_set(rows, {"tail_number": "4X-S02"}, type_code="ZZ-999"),
-                                  _set(rows, {"tail_number": "4X-S04"}, status="bogus")),
+                                  _set(rows, {"tail_number": "4X-S04"}, status="bogus"),
+                                  _set(rows, {"tail_number": "4X-S01"}, squadron_code=" SQ-11 "),
+                                  _set(rows, {"tail_number": "4X-S06"}, squadron_code="  ")),
         "usage_counter": lambda rows: (_set(rows, {"aircraft_id": tails["4X-S06"], "unit_code": "FH"},
                                             value=float("nan")), duplicate_counter(rows)),
         "data_load_status": lambda rows: rows.__setitem__(slice(None), [r for r in rows
@@ -160,6 +162,7 @@ def test_dirty_lake_rows_fail_safe(dirty_db: Path) -> None:
     assert by_tail["4X-S04"].status == OperationalStatus.GROUNDED
     assert ("AIRCRAFT_STATUS", "bogus") in by_tail["4X-S04"].data_issues
     assert Unit.FH not in by_tail["4X-S06"].counters
+    assert by_tail["4X-S01"].squadron_code == "SQ-11" and by_tail["4X-S06"].squadron_code is None  # trimmed / blank
     assert ("INSPECTION_LIMIT", "APU500") in by_tail["4X-P03"].data_issues  # unknown unit: flagged, not dropped
     assert ("COUNTER", "FH") in by_tail["4X-P01"].data_issues  # duplicate rows: no "last one wins"
     assert ("PERMIT", "COA") in by_tail["4X-P02"].data_issues  # unknown permit status

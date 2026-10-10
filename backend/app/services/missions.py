@@ -34,20 +34,28 @@ def _resolve_tails(tails: list[str], by_tail: dict[str, int], field: str) -> lis
     return ids
 
 
-def _validate_codes(payload: dict[str, Any], reference: dict[str, Any]) -> None:
+def validate_codes(payload: dict[str, Any], reference: dict[str, Any]) -> None:
     quals = {q["qualification_code"] for q in reference["qualifications"]}
     for q in payload["required_qualifications"]:
         if q not in quals:
             raise validation("required_qualifications", "UNKNOWN_QUALIFICATION", qualification_code=q)
     if payload["departure_base_code"] not in {b["base_code"] for b in reference["bases"]}:
         raise validation("departure_base_code", "UNKNOWN_BASE")
+    squadrons = {q["squadron_code"] for q in reference.get("squadrons", [])}
+    for code in payload.get("squadron_codes") or []:
+        if code not in squadrons:
+            raise validation("squadron_codes", "UNKNOWN_SQUADRON", squadron_code=code)
+    types = {t["type_code"] for t in reference["aircraft_types"]}
+    for code in payload.get("aircraft_type_codes") or []:
+        if code not in types:
+            raise validation("aircraft_type_codes", "UNKNOWN_TYPE", type_code=code)
 
 
 def upsert_mission(s: Session, payload: dict[str, Any], *, user_id: int, now: datetime, by_tail: dict[str, int],
                    reference: dict[str, Any], mission: orm.MissionRow | None = None) -> orm.MissionRow:
     if payload["start_at"] < now - timedelta(minutes=5):
         raise validation("start_at", "START_IN_PAST")
-    _validate_codes(payload, reference)
+    validate_codes(payload, reference)
     include = _resolve_tails(payload.get("force_include", []), by_tail, "force_include")
     exclude = _resolve_tails(payload.get("force_exclude", []), by_tail, "force_exclude")
     if set(include) & set(exclude):
@@ -80,6 +88,8 @@ def upsert_mission(s: Session, payload: dict[str, Any], *, user_id: int, now: da
         mission.status, mission.updated_at = "DRAFT", now
     store.replace_mission_children(s, mission.mission_id, payload["required_qualifications"],
                                    [(i, "INCLUDE") for i in include] + [(i, "EXCLUDE") for i in exclude])
+    store.replace_mission_scope(s, mission.mission_id, payload.get("squadron_codes") or [],
+                                payload.get("aircraft_type_codes") or [])
     s.flush()
     return mission
 
@@ -138,6 +148,7 @@ def _domain_windows(m: orm.MissionRow) -> tuple[ExpiryWindow, ...]:
 
 def to_domain(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> MissionRequest:
     forces = store.mission_forces(s, m.mission_id)
+    squadrons, types = store.mission_scope(s, m.mission_id)
     return MissionRequest(
         name=m.name, mission_type=MissionType(m.mission_type), required_count=m.required_aircraft_count,
         start_at=m.start_at, duration_hours=m.est_duration_hours, landings=m.est_landings,
@@ -147,11 +158,13 @@ def to_domain(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> Mis
         engine_requirement=EngineRequirement(m.engine_requirement), same_type_required=m.same_type_required,
         force_include=frozenset(tails_by_id[f.aircraft_id] for f in forces if f.mode == "INCLUDE"),
         force_exclude=frozenset(tails_by_id[f.aircraft_id] for f in forces if f.mode == "EXCLUDE"),
-        mission_id=m.mission_id, expiry_windows=_domain_windows(m))
+        mission_id=m.mission_id, expiry_windows=_domain_windows(m),
+        squadron_codes=frozenset(squadrons), type_codes=frozenset(types))
 
 
 def mission_out(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> dict[str, Any]:
     forces = store.mission_forces(s, m.mission_id)
+    scope = store.mission_scope(s, m.mission_id)
     latest = store.latest_run(s, m.mission_id)
     return {
         "mission_id": m.mission_id, "name": m.name, "mission_type": m.mission_type, "status": m.status,
@@ -166,6 +179,7 @@ def mission_out(s: Session, m: orm.MissionRow, tails_by_id: dict[int, str]) -> d
         "force_include": sorted(tails_by_id[f.aircraft_id] for f in forces if f.mode == "INCLUDE"),
         "force_exclude": sorted(tails_by_id[f.aircraft_id] for f in forces if f.mode == "EXCLUDE"),
         "overrides": overrides_of(m), "expiry_windows": windows_of(m),
+        "squadron_codes": scope[0], "aircraft_type_codes": scope[1],
         "created_by": m.created_by, "created_at": iso(m.created_at),
         "updated_at": iso(m.updated_at), "latest_run_id": latest.run_id if latest else None,
         "assignments": [
@@ -186,6 +200,7 @@ def duplicate(s: Session, m: orm.MissionRow, user_id: int, now: datetime) -> orm
     forces = store.mission_forces(s, m.mission_id)
     store.replace_mission_children(s, copy.mission_id, store.mission_qualifications(s, m.mission_id),
                                    [(f.aircraft_id, f.mode) for f in forces])
+    store.replace_mission_scope(s, copy.mission_id, *store.mission_scope(s, m.mission_id))
     return copy
 
 

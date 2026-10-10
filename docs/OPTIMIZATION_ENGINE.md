@@ -144,6 +144,7 @@ and make the aircraft unavailable.
 | R1 | Status must be `OPERATIONAL` | `AIRCRAFT_NOT_OPERATIONAL` |
 | R2 | No overlapping assignment (incl. turnaround) | `ALREADY_ASSIGNED` |
 | R3 | Engine requirement | `ENGINE_REQUIREMENT_NOT_MET` |
+| R3b | Mission scope chosen by the planner (FR-35): aircraft type ∈ chosen types, squadron ∈ chosen squadrons (empty = any; no squadron on record ⇒ not in scope) | `AIRCRAFT_TYPE_NOT_SELECTED`, `SQUADRON_NOT_SELECTED` |
 | R4 | Endurance `D × (1+buffer) ≤ max_endurance_hours` | `ENDURANCE_EXCEEDED` |
 | R5 | No open GROUNDING MA | `GROUNDING_MA_OPEN` |
 | R6 | Every inspection limit (2.3 / 2.4) | `INSPECTION_EXPIRED`, `INSPECTION_DUE_BEFORE_MISSION_END` |

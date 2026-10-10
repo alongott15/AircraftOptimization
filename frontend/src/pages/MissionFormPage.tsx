@@ -59,6 +59,8 @@ interface FormState {
   duration_buffer_pct: number | '';  // only set from the ML suggestion (FR-52); no manual buffer fields
   weights_preset: string | null;
   expiry_windows: BandRow[];
+  squadron_codes: string[];
+  aircraft_type_codes: string[];
   force_include: string[];
   force_exclude: string[];
 }
@@ -76,6 +78,7 @@ function fromMission(m: Mission): FormState {
     weights_preset: typeof o.weights_preset === 'string' ? o.weights_preset : null,
     force_include: m.force_include, force_exclude: m.force_exclude,
     expiry_windows: (m.expiry_windows ?? []).map((w) => ({ unit: w.unit, within: w.within, until: w.until })),
+    squadron_codes: m.squadron_codes ?? [], aircraft_type_codes: m.aircraft_type_codes ?? [],
   };
 }
 
@@ -106,7 +109,8 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
     required_qualifications: [], engine_requirement: 'ANY', same_type_required: false,
     start_local: defaultStartLocal(now), duration: '2:00', est_landings: 1, est_touch_and_goes: 0, est_engine_starts: 1,
     departure_base_code: null, duration_buffer_pct: '',
-    weights_preset: null, force_include: [], force_exclude: [], expiry_windows: [],
+    weights_preset: null, force_include: [], force_exclude: [], expiry_windows: [], squadron_codes: [],
+    aircraft_type_codes: [],
   }));
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setF((cur) => ({ ...cur, [key]: value }));
   const ref = reference.data;
@@ -141,6 +145,7 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
       start_at: localInputToUtc(f.start_local), est_duration_hours: durationHours ?? 0, est_landings: f.est_landings,
       est_touch_and_goes: f.est_touch_and_goes, est_engine_starts: f.est_engine_starts,
       departure_base_code: f.departure_base_code ?? '', force_include: f.force_include, force_exclude: f.force_exclude,
+      squadron_codes: f.squadron_codes, aircraft_type_codes: f.aircraft_type_codes,
       expiry_windows: f.expiry_windows.map((w) => ({
         unit: w.unit as NonNullable<MissionInput['expiry_windows']>[number]['unit'],
         within: Number(w.within || 0),
@@ -212,6 +217,17 @@ function MissionForm({ initial, missionId }: { initial?: FormState; missionId?: 
                 <NumberInput label={t('field.requiredCount')} min={1} max={20} value={f.required_aircraft_count}
                   error={errors.required_aircraft_count} allowDecimal={false}
                   onChange={(v) => set('required_aircraft_count', Number(v) || 1)} data-testid="mission-count" />
+                <Group grow align="flex-start">
+                  <MultiSelect label={t('field.squadrons')} searchable clearable value={f.squadron_codes}
+                    placeholder={f.squadron_codes.length ? undefined : t('mission.anySquadron')}
+                    data={(ref?.squadrons ?? []).map((q) => ({ value: String(q.squadron_code), label: String(q.name_he) }))}
+                    onChange={(v) => set('squadron_codes', v)} error={errors.squadron_codes} data-testid="mission-squadrons" />
+                  <MultiSelect label={t('field.aircraftTypes')} searchable clearable value={f.aircraft_type_codes}
+                    placeholder={f.aircraft_type_codes.length ? undefined : t('mission.anyType')}
+                    data={(ref?.aircraft_types ?? []).map((x) => ({ value: String(x.type_code), label: String(x.name_he) }))}
+                    onChange={(v) => set('aircraft_type_codes', v)} error={errors.aircraft_type_codes} data-testid="mission-types" />
+                </Group>
+                <Text size="xs" c="dimmed" mt={-6}>{t('mission.scopeHint')}</Text>
                 <MultiSelect label={t('field.qualifications')} searchable value={f.required_qualifications}
                   data={(ref?.qualifications ?? []).map((q) => ({ value: String(q.qualification_code), label: String(q.name_he) }))}
                   onChange={(v) => set('required_qualifications', v)} error={errors.required_qualifications}
