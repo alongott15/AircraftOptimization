@@ -72,7 +72,7 @@ verify with a contrast unit test over the token table.
 ### 2.6 Layout
 - Desktop-first: optimized 1440×900, supported ≥ 1024 px. Dashboard and aircraft view readable at 375 px (stacked).
 - Mantine `AppShell`: navbar on the **right** (inline-start), 240 px, collapsible to icons; header 56 px.
-- Header (right → left): logo + "אופטימיזציית צי" · nav breadcrumbs · data-freshness indicator · theme toggle · user menu.
+- Header (right → left): logo + "רקיע" · nav breadcrumbs · data-freshness indicator · theme toggle · user menu.
 - Global `AlertBanner` sits directly under the header on every page while any expired item exists.
 
 ## 3. Components (`frontend/src/components/`)
@@ -219,7 +219,7 @@ always include a text/table alternative.
 ### 8.1 Navigation & common
 | Key | Hebrew |
 |-----|--------|
-| app.title | אופטימיזציית צי |
+| app.title | רקיע (tagline: כשירות וזמינות הצי · subtitle: מערכת תומכת החלטה לכשירות וזמינות הצי) |
 | nav.dashboard | לוח בקרה |
 | nav.fleet | צי המטוסים |
 | nav.missionNew | תכנון משימה |

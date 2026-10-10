@@ -53,7 +53,7 @@ function Overview({ a }: { a: AircraftDetail }) {
         <Field label={t('field.endurance')} value={`${formatNumber(a.max_endurance_hours, 1)} ${t('common.hoursShort')}`} />
         <Field label={t('field.lastFlight')} value={`${formatDateTime(a.last_flight_at)} (${formatRelative(a.last_flight_at, now)})`} />
         <Field label={t('field.idleDays')}
-          value={a.idle ? <StatusBadge status={a.idle.status} size="sm" suffix={<Ltr>{` ${formatNumber(a.idle.idle_days, 1)}`}</Ltr>} /> : t('common.dash')} />
+          value={a.idle ? <StatusBadge status={a.idle.status} size="sm" suffix={<>{' '}<Ltr>{formatNumber(a.idle.idle_days, 1)}</Ltr></>} /> : t('common.dash')} />
       </SimpleGrid>
       <Paper withBorder p="sm">
         <Group justify="space-between" mb={6}>

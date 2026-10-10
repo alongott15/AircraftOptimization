@@ -36,7 +36,8 @@ export function ToneBadge({ tone, children, size = 'md', pulse }: {
       radius="xl"
       className={pulse ? 'ao-pulse' : undefined}
       leftSection={<IconCmp size={14} aria-hidden />}
-      style={{ background: colors.bg, color: colors.fg, border: `1px solid ${colors.fg}` }}
+      style={{ background: colors.bg, color: colors.fg, border: `1px solid ${colors.fg}`, maxWidth: 'none', flexShrink: 0 }}
+      styles={{ label: { overflow: 'visible', textOverflow: 'clip' } }}
       data-tone={tone}
     >
       {children}

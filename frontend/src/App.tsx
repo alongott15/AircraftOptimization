@@ -97,6 +97,7 @@ function Shell() {
               <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label={t('nav.menu')} />
               <IconPlane size={26} color="var(--mantine-primary-color-filled)" aria-hidden />
               <Title order={4}>{t('app.title')}</Title>
+              <Text size="sm" c="dimmed" visibleFrom="sm">{t('app.tagline')}</Text>
             </Group>
             <Group gap="md" wrap="nowrap">
               <DataFreshnessIndicator />

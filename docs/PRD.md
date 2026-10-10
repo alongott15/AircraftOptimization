@@ -1,4 +1,4 @@
-# PRD — Fleet Usability Optimizer ("מערכת אופטימיזציה לזמינות הצי")
+# PRD — Fleet Usability Optimizer — product name "רקיע" ("מערכת חכמה לכשירות וזמינות הצי")
 
 | Field | Value |
 |-------|-------|
