@@ -75,6 +75,13 @@ verify with a contrast unit test over the token table.
 - Header (right → left): logo + "רקיע" · nav breadcrumbs · data-freshness indicator · theme toggle · user menu.
 - Global `AlertBanner` sits directly under the header on every page while any expired item exists.
 
+### 2.7 Logo
+- Mark (`components/Logo.tsx` `LogoMark`, same artwork in `public/favicon.svg`): a rounded-square badge with a navy →
+  sky-blue gradient (`#0B2240` → `#1D4E89` → `#3F7FD9`); a check mark whose long stroke (cyan → white) becomes the
+  climb of a departing aircraft — "ready to fly" — over a faint horizon arc.
+- Always paired with the product name (`app.title`), so the mark is decorative (`aria-hidden`). Sizes: header 30 px,
+  login 56 px, browser tab 16 px. The badge carries its own background, so it works on light and dark themes alike.
+
 ## 3. Components (`frontend/src/components/`)
 
 | Component | Purpose | Key props / behaviour |

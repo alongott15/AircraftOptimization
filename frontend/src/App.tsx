@@ -32,6 +32,7 @@ import { Link } from 'react-router-dom';
 
 import { useFleetSummary, useLogout } from './api/hooks';
 import { useAuth, type Permission } from './auth/AuthProvider';
+import { LogoMark } from './components/Logo';
 import { AlertBanner, DataFreshnessIndicator, LoadingState, ServerNowProvider } from './components/common';
 import { t, tk, type MessageKey } from './i18n';
 import { DashboardPage } from './pages/DashboardPage';
@@ -95,7 +96,7 @@ function Shell() {
           <Group h="100%" px="md" justify="space-between" wrap="nowrap">
             <Group gap="sm" wrap="nowrap">
               <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label={t('nav.menu')} />
-              <IconPlane size={26} color="var(--mantine-primary-color-filled)" aria-hidden />
+              <LogoMark size={30} />
               <Title order={4}>{t('app.title')}</Title>
               <Text size="sm" c="dimmed" visibleFrom="sm">{t('app.tagline')}</Text>
             </Group>

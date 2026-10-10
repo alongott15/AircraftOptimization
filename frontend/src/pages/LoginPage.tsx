@@ -1,10 +1,11 @@
 import { Alert, Button, Center, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
-import { IconAlertOctagon, IconPlane } from '@tabler/icons-react';
+import { IconAlertOctagon } from '@tabler/icons-react';
 import { useState, type FormEvent } from 'react';
 
 import { ApiError } from '../api/client';
 import { useAuthConfig, useLogin } from '../api/hooks';
 import { errorMessage } from '../components/common';
+import { LogoMark } from '../components/Logo';
 import { t, tk } from '../i18n';
 
 export function LoginPage() {
@@ -29,7 +30,7 @@ export function LoginPage() {
         <form onSubmit={submit}>
           <Stack>
             <Stack gap={4} align="center">
-              <IconPlane size={40} color="var(--mantine-primary-color-filled)" aria-hidden />
+              <LogoMark size={56} />
               <Title order={3}>{t('app.title')}</Title>
               <Text c="dimmed" size="sm">
                 {t('login.title')}
