@@ -169,7 +169,7 @@ Standard tables/forms using the same components.
 └───────────────────────────────────────────────────────────────────────────────────┘
 ```
 - Five lanes, first lane at the right (RTL); lanes stretch to the tallest so a card can be dropped at any height;
-  the board scrolls sideways below ~1300 px. Card start border = status color (expired red, expiring amber, verified
+  the board scrolls sideways below ~1370 px (lanes ≥ 210 px). Card start border = status color (expired red, expiring amber, verified
   green); status is always badge + icon + text, plus "מונע כשירות" when the task blocks every mission.
 - Moving: HTML5 drag & drop (custom MIME type — only cards drop on lanes; "אומת" accepts nothing) **and** the "⋮"
   menu "העבר אל" for keyboard/screen-reader users. Moving to מתוכנן/בביצוע without a start time opens the schedule

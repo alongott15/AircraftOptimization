@@ -176,7 +176,7 @@ bdi[dir='ltr'] {
    the tallest one so a card can be dropped at any height. */
 .ao-kanban {
   display: grid;
-  grid-template-columns: repeat(5, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, minmax(210px, 1fr)); /* all five fit a 1440 px screen beside the navbar */
   gap: var(--mantine-spacing-sm);
   overflow-x: auto;
   padding-block-end: var(--mantine-spacing-xs);
