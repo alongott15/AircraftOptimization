@@ -72,13 +72,14 @@ verify with a contrast unit test over the token table.
 ### 2.6 Layout
 - Desktop-first: optimized 1440×900, supported ≥ 1024 px. Dashboard and aircraft view readable at 375 px (stacked).
 - Mantine `AppShell`: navbar on the **right** (inline-start), 240 px, collapsible to icons; header 56 px.
-- Header (right → left): logo + "רקיע" · nav breadcrumbs · data-freshness indicator · theme toggle · user menu.
+- Header (right → left): logo + "אוריון" · nav breadcrumbs · data-freshness indicator · theme toggle · user menu.
 - Global `AlertBanner` sits directly under the header on every page while any expired item exists.
 
 ### 2.7 Logo
-- Mark (`components/Logo.tsx` `LogoMark`, same artwork in `public/favicon.svg`): a rounded-square badge with a navy →
-  sky-blue gradient (`#0B2240` → `#1D4E89` → `#3F7FD9`); a check mark whose long stroke (cyan → white) becomes the
-  climb of a departing aircraft — "ready to fly" — over a faint horizon arc.
+- Product name **אוריון** (Orion). Mark (`components/Logo.tsx` `LogoMark`, same artwork in `public/favicon.svg`): the
+  Orion constellation in a night-sky badge (gradient `#050B1E` → `#132B5E` → `#2D57B0`) — the hourglass of seven
+  stars joined by thin lines, the three-star belt at its centre, warm Betelgeuse (`#FFB566`) and blue-white Rigel —
+  with an aircraft departing the constellation along a dotted cyan contrail: the fleet, read off the sky.
 - Always paired with the product name (`app.title`), so the mark is decorative (`aria-hidden`). Sizes: header 30 px,
   login 56 px, browser tab 16 px. The badge carries its own background, so it works on light and dark themes alike.
 
@@ -226,7 +227,7 @@ always include a text/table alternative.
 ### 8.1 Navigation & common
 | Key | Hebrew |
 |-----|--------|
-| app.title | רקיע (tagline: כשירות וזמינות הצי · subtitle: מערכת תומכת החלטה לכשירות וזמינות הצי) |
+| app.title | אוריון (tagline: כשירות וזמינות הצי · subtitle: מערכת תומכת החלטה לכשירות וזמינות הצי) |
 | nav.dashboard | לוח בקרה |
 | nav.fleet | צי המטוסים |
 | nav.missionNew | תכנון משימה |

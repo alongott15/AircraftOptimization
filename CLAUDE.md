@@ -1,4 +1,4 @@
-# AircraftOptimization — Fleet Usability Optimizer "רקיע" (POC)
+# AircraftOptimization — Fleet Usability Optimizer "אוריון" (POC)
 
 Decision-support web app for an airline / flight operator. Given a mission request (how many aircraft, which
 qualifications, estimated flight time, landings, touch-and-goes, start time …) it recommends the best set of
