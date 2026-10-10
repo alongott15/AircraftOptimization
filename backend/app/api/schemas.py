@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import unicodedata
+from datetime import UTC, datetime
 from typing import Annotated, Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -12,6 +13,9 @@ Status = Literal["EXPIRED", "EXPIRING_SOON", "OK", "UNKNOWN"]
 MissionTypeLit = Literal["TRAINING", "TRANSPORT", "FERRY", "OTHER"]
 EngineReqLit = Literal["ANY", "SINGLE", "TWIN", "MIN_2"]
 PresetLit = Literal["BALANCED", "MAX_SAFETY", "MAX_AVAILABILITY"]
+TaskActionLit = Literal["PERFORM_INSPECTION", "RENEW_PERMIT", "CLOSE_MA", "RENEW_QUALIFICATION", "IDLE_CHECK",
+                        "RETURN_TO_SERVICE", "FIX_DATA"]
+TaskStatusLit = Literal["REQUIRED", "SCHEDULED", "IN_PROGRESS", "DONE"]
 ParamValue = str | int | float | None
 
 
@@ -618,3 +622,97 @@ class ReadyOut(Out):
     db: str
     data_source: str
     models: dict[str, str]
+
+
+# ───────── maintenance board & recommendations (FR-90…FR-92) ─────────
+class MaintenanceTaskIn(In):
+    item_key: str = Field(min_length=3, max_length=120, pattern=r"^\d{1,10}:[A-Z_]{1,24}:[^\x00-\x1f\x7f]{1,80}$")
+    status: TaskStatusLit
+    planned_start: datetime | None = None
+    planned_end: datetime | None = None
+    assignee: str | None = Field(default=None, max_length=80)
+    notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator("planned_start", "planned_end")
+    @classmethod
+    def _aware(cls, v: datetime | None) -> datetime | None:
+        if v is None:
+            return v
+        if v.tzinfo is None:
+            raise ValueError("INVALID_VALUE")
+        try:
+            utc = v.astimezone(UTC)
+        except OverflowError:
+            raise ValueError("INVALID_VALUE") from None
+        if not 2000 <= utc.year <= 2100:  # the service narrows this to a window around now
+            raise ValueError("INVALID_VALUE")
+        return utc
+
+    @field_validator("assignee", "notes")
+    @classmethod
+    def _plain_text(cls, v: str | None) -> str | None:
+        """No control or bidi-formatting characters (NUL breaks PostgreSQL; overrides can disguise text in RTL)."""
+        if v is not None and any(unicodedata.category(ch) in ("Cc", "Cf") and ch not in "\n\t" for ch in v):
+            raise ValueError("INVALID_VALUE")
+        return v
+
+
+class MissionRefOut(Out):
+    mission_id: int
+    name: str
+    start_at: str | None
+
+
+class MaintenanceItemOut(Out):
+    card_id: str  # unique per card: item_key, or item_key#plan for a verified earlier cycle
+    item_key: str
+    aircraft_id: int
+    tail_number: str
+    type_code: str
+    base_code: str
+    squadron_code: str | None
+    action: TaskActionLit
+    ref: str
+    compliance_status: Status
+    blocking: bool
+    due_at: str | None
+    remaining: float | None
+    unit: str | None
+    zone_code: str | None
+    status: Literal["REQUIRED", "SCHEDULED", "IN_PROGRESS", "DONE", "VERIFIED"]
+    planned_start: str | None
+    planned_end: str | None
+    assignee: str | None
+    notes: str | None
+    updated_at: str | None
+    unblocks: list[MissionRefOut]
+
+
+class MaintenanceBoardOut(Out):
+    as_of: str | None
+    items: list[MaintenanceItemOut]
+
+
+class RecommendedTaskOut(Out):
+    item_key: str
+    action: TaskActionLit
+    ref: str
+
+
+class RecommendedAircraftOut(Out):
+    aircraft_id: int
+    tail_number: str
+    type_code: str
+    base_code: str
+    tasks: list[RecommendedTaskOut]
+
+
+class MissionMaintenanceOut(Out):
+    mission_id: int
+    name: str
+    start_at: str | None
+    required: int
+    eligible_count: int
+    shortfall: int
+    complete_by: str | None
+    candidates: list[RecommendedAircraftOut]

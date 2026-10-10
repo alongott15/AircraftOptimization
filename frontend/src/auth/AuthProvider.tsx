@@ -3,13 +3,13 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { useMe } from '../api/hooks';
 import type { User } from '../api/types';
 
-export type Permission = 'VIEW' | 'PLAN' | 'WHAT_IF' | 'AUDIT' | 'ADMIN';
+export type Permission = 'VIEW' | 'PLAN' | 'WHAT_IF' | 'AUDIT' | 'MAINTAIN' | 'ADMIN';
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   VIEWER: ['VIEW'],
   PLANNER: ['VIEW', 'PLAN', 'WHAT_IF'],
-  MAINTENANCE_CONTROLLER: ['VIEW', 'WHAT_IF', 'AUDIT'],
-  ADMIN: ['VIEW', 'PLAN', 'WHAT_IF', 'AUDIT', 'ADMIN'],
+  MAINTENANCE_CONTROLLER: ['VIEW', 'WHAT_IF', 'AUDIT', 'MAINTAIN'],
+  ADMIN: ['VIEW', 'PLAN', 'WHAT_IF', 'AUDIT', 'MAINTAIN', 'ADMIN'],
 };
 
 interface AuthState {

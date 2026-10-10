@@ -26,6 +26,7 @@ import { useAssign, useMission, useMissionAction, useOptimize, useReference, use
 import type { Candidate, Mission, OptimizationRun } from '../api/types';
 import { useAuth } from '../auth/AuthProvider';
 import { Disclaimer, ErrorState, LoadingState, Ltr, errorMessage } from '../components/common';
+import { MissionMaintenanceHint } from '../components/maintenance';
 import { ReasonList, ScoreBreakdown, useNames } from '../components/results';
 import { ToneBadge } from '../components/StatusBadge';
 import { formatDateTime, formatHours, formatNumber } from '../i18n/format';
@@ -172,6 +173,7 @@ function Results({ run, mission, canPlan }: { run: OptimizationRun; mission: Mis
           {nearest.length > 0 && (
             <Text size="sm">{t('mission.nearest')}: {nearest.map((c) => c.tail_number).join(', ')}</Text>
           )}
+          {mission.status !== 'CANCELLED' && <MissionMaintenanceHint missionId={mission.mission_id} />}
         </Alert>
       )}
       {run.sets.length > 0 && (

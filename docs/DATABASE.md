@@ -384,6 +384,25 @@ CREATE TABLE ml_model (
   artifact_sha256 CHAR(64) NOT NULL,                     -- verified before loading (SECURITY.md §8)
   PRIMARY KEY (model_name, version)
 );
+
+CREATE TABLE maintenance_plan (                        -- Alembic 0005; FR-91 manual schedule (planning only)
+  plan_id        INTEGER PRIMARY KEY,                    -- one row per (task, cycle); earlier cycles stay as history
+  item_key       VARCHAR(120) NOT NULL,                  -- '<aircraft_id>:<action>:<ref>' (API.md §3.8), indexed
+  aircraft_id    INTEGER NOT NULL,                       -- fleet id (no FK: fleet data may live in Vertica)
+  tail_number    VARCHAR(16) NOT NULL,
+  action         VARCHAR(24) NOT NULL,                   -- PERFORM_INSPECTION | RENEW_PERMIT | CLOSE_MA | …
+  ref            VARCHAR(80) NOT NULL,
+  fingerprint    VARCHAR(200) NOT NULL,                  -- due cycle planned for; a new cycle starts unplanned (BR-16)
+  status         VARCHAR(16) NOT NULL CHECK (status IN ('REQUIRED','SCHEDULED','IN_PROGRESS','DONE')),
+  planned_start  TIMESTAMP WITH TIME ZONE,
+  planned_end    TIMESTAMP WITH TIME ZONE,
+  assignee       VARCHAR(80),
+  notes          VARCHAR(500),
+  updated_by     INTEGER REFERENCES app_user,
+  updated_at     TIMESTAMP WITH TIME ZONE NOT NULL,
+  UNIQUE (item_key, fingerprint)                         -- written with INSERT … ON CONFLICT DO NOTHING (race-safe)
+);
+-- "VERIFIED" is never stored: it is derived from the fleet data (task_done) — a row never changes eligibility.
 ```
 
 ## 5. Reference data (seed)
@@ -521,6 +540,46 @@ permits valid ≥ 60 days; `last_flight_at` within 1–6 days; qualifications wi
 | M-B | הובלת נוסעים | 3 | T0 + 1 d | 4.0 | 2 | 0 | PAX, IFR | MIN_2 | TRANSPORT | CEN |
 | M-C | טיסת מעבר ארוכה | 1 | T0 + 3 h | 7.0 | 1 | 0 | OVERWATER | MIN_2 | FERRY | CEN |
 | M-F | גיחת אימון קרב | 4 | T0 + 2 h | 1.5 | 1 | 2 | NIGHT | ANY (scope SQ-41, SQ-42) | TRAINING | EST |
+
+### 6.6 Extended demo profile (`--profile extended`, used by `make demo` and docker compose)
+The golden data (§6.2, unchanged — a test compares every golden aircraft's status) plus, from its own random stream:
+
+**20 more aircraft** in four new squadrons — `4X-S09…S14` trainers (SQ-13, בסיס דרום), `4X-P11…P16` turboprops
+(SQ-23, בסיס צפון), `4X-J07…J09` jets (SQ-32, בסיס דרום), `4X-F07…F11` F-16I (SQ-43, בסיס מזרח) — 54 in all:
+
+| # | Tail | Scenario | Board card |
+|---|------|----------|------------|
+| EX-01 | 4X-S09 | annual inspection expired 4 days ago | ביצוע בדיקה שנתית — expired, blocking |
+| EX-02 | 4X-S10 | 50-h inspection due in 2 FH | expiring soon |
+| EX-03 | 4X-S11 | grounding MA `MA-2026-00431` (low oil pressure, engine 1) | close MA — in progress |
+| EX-04 | 4X-S12 | idle 35 days (limit 30) | idle check |
+| EX-05 | 4X-S13 | COA expires in 6 days | expiring soon |
+| EX-06 | 4X-S14 | annual expired, planned, then performed 2 days ago | **verified** |
+| EX-07 | 4X-P11 | A-check due in 3 FH | expiring soon |
+| EX-08 | 4X-P12 | insurance expired 2 days ago | renew — scheduled |
+| EX-09 | 4X-P13 | deferred weather radar `MA-2026-00432` (revokes IFR), deferral ends in 2 days | expiring soon |
+| EX-10 | 4X-P14 | in maintenance | return to service — in progress |
+| EX-11 | 4X-P15 | landing-gear inspection due in 8 landings | expiring soon |
+| EX-12 | 4X-P16 | usage counters 3 days old (stale feed) | refresh stale data — never recommended |
+| EX-13 | 4X-J07 | C-check (calendar) due in 5 days | expiring soon |
+| EX-14 | 4X-J08 | radio licence expired, planned, then renewed | **verified** |
+| EX-15 | 4X-J09 | idle 50 days (limit 45) | idle check |
+| EX-16 | 4X-F07 | phase inspection overflown by 3 FH | expired — scheduled |
+| EX-17 | 4X-F08 | grounding MA `MA-2026-00433` (hydraulic leak, main gear) | close MA — done, awaiting verification |
+| EX-18 | 4X-F09 | annual due in 6 days — before its assigned exercise | expiring soon + dashboard "assignment lost eligibility" |
+| EX-19 | 4X-F10 | engine borescope due in 4 FH | expiring soon |
+| EX-20 | 4X-F11 | grounding MA `MA-2026-00434`, planned, then closed | **verified** |
+
+**Missions** (ids 2…10): open drafts short of aircraft so recommendations appear — "תרגיל אימון לילה — דרום"
+(12 trainers, NIGHT, T0 + 58 h: 7 eligible, 7 verified options), "הטסת צוותים רפואיים" (12 × MIN_2, MEDEVAC,
+T0 + 74 h), "גיחות אימון קרב — שבוע הבא" (15 fighters, F-16I/F-15I scope, T0 + 5 d); drafts with enough aircraft
+("טיסת מעבר לבסיס דרום", "הובלת מטען לבסיס צפון"); assigned missions on extended aircraft only (4X-S14, 4X-J07,
+4X-F09 + 4X-F11); one cancelled.
+
+**Maintenance schedule** (`maintenance_plan`, keyed to each task's real cycle): 5 scheduled (incl. golden 4X-S03 and
+4X-P06), 4 in progress (4X-J03, 4X-J04, 4X-S11, 4X-P14), 3 done awaiting verification (4X-P05 COA, 4X-S07 idle check
+on the ground — the check flight is not recorded yet, 4X-F08) and 3 verified (EX-06, EX-14, EX-20). Golden aircraft
+receive plans only — never data changes or assignments — so PRD §11 still holds (tested).
 
 ## 7. Vertica mapping (production)
 

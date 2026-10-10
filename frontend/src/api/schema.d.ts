@@ -499,6 +499,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maintenance/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maintenance Board */
+        get: operations["maintenance_board_api_v1_maintenance_board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Maintenance Task */
+        put: operations["update_maintenance_task_api_v1_maintenance_tasks_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maintenance/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maintenance Recommendations */
+        get: operations["maintenance_recommendations_api_v1_maintenance_recommendations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ml/models": {
         parameters: {
             query?: never;
@@ -1184,6 +1235,87 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** MaintenanceBoardOut */
+        MaintenanceBoardOut: {
+            /** As Of */
+            as_of: string | null;
+            /** Items */
+            items: components["schemas"]["MaintenanceItemOut"][];
+        };
+        /** MaintenanceItemOut */
+        MaintenanceItemOut: {
+            /** Card Id */
+            card_id: string;
+            /** Item Key */
+            item_key: string;
+            /** Aircraft Id */
+            aircraft_id: number;
+            /** Tail Number */
+            tail_number: string;
+            /** Type Code */
+            type_code: string;
+            /** Base Code */
+            base_code: string;
+            /** Squadron Code */
+            squadron_code: string | null;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "PERFORM_INSPECTION" | "RENEW_PERMIT" | "CLOSE_MA" | "RENEW_QUALIFICATION" | "IDLE_CHECK" | "RETURN_TO_SERVICE" | "FIX_DATA";
+            /** Ref */
+            ref: string;
+            /**
+             * Compliance Status
+             * @enum {string}
+             */
+            compliance_status: "EXPIRED" | "EXPIRING_SOON" | "OK" | "UNKNOWN";
+            /** Blocking */
+            blocking: boolean;
+            /** Due At */
+            due_at: string | null;
+            /** Remaining */
+            remaining: number | null;
+            /** Unit */
+            unit: string | null;
+            /** Zone Code */
+            zone_code: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "REQUIRED" | "SCHEDULED" | "IN_PROGRESS" | "DONE" | "VERIFIED";
+            /** Planned Start */
+            planned_start: string | null;
+            /** Planned End */
+            planned_end: string | null;
+            /** Assignee */
+            assignee: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Updated At */
+            updated_at: string | null;
+            /** Unblocks */
+            unblocks: components["schemas"]["MissionRefOut"][];
+        };
+        /** MaintenanceTaskIn */
+        MaintenanceTaskIn: {
+            /** Item Key */
+            item_key: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "REQUIRED" | "SCHEDULED" | "IN_PROGRESS" | "DONE";
+            /** Planned Start */
+            planned_start?: string | null;
+            /** Planned End */
+            planned_end?: string | null;
+            /** Assignee */
+            assignee?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /** MissionIn */
         MissionIn: {
             /** Name */
@@ -1247,6 +1379,25 @@ export interface components {
             squadron_codes?: string[];
             /** Aircraft Type Codes */
             aircraft_type_codes?: string[];
+        };
+        /** MissionMaintenanceOut */
+        MissionMaintenanceOut: {
+            /** Mission Id */
+            mission_id: number;
+            /** Name */
+            name: string;
+            /** Start At */
+            start_at: string | null;
+            /** Required */
+            required: number;
+            /** Eligible Count */
+            eligible_count: number;
+            /** Shortfall */
+            shortfall: number;
+            /** Complete By */
+            complete_by: string | null;
+            /** Candidates */
+            candidates: components["schemas"]["RecommendedAircraftOut"][];
         };
         /** MissionOut */
         MissionOut: {
@@ -1328,6 +1479,15 @@ export interface components {
             duration_buffer_pct?: number | null;
             /** Weights Preset */
             weights_preset?: ("BALANCED" | "MAX_SAFETY" | "MAX_AVAILABILITY") | null;
+        };
+        /** MissionRefOut */
+        MissionRefOut: {
+            /** Mission Id */
+            mission_id: number;
+            /** Name */
+            name: string;
+            /** Start At */
+            start_at: string | null;
         };
         /** ModelOut */
         ModelOut: {
@@ -1566,6 +1726,31 @@ export interface components {
             params?: {
                 [key: string]: string | number | null;
             };
+        };
+        /** RecommendedAircraftOut */
+        RecommendedAircraftOut: {
+            /** Aircraft Id */
+            aircraft_id: number;
+            /** Tail Number */
+            tail_number: string;
+            /** Type Code */
+            type_code: string;
+            /** Base Code */
+            base_code: string;
+            /** Tasks */
+            tasks: components["schemas"]["RecommendedTaskOut"][];
+        };
+        /** RecommendedTaskOut */
+        RecommendedTaskOut: {
+            /** Item Key */
+            item_key: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "PERFORM_INSPECTION" | "RENEW_PERMIT" | "CLOSE_MA" | "RENEW_QUALIFICATION" | "IDLE_CHECK" | "RETURN_TO_SERVICE" | "FIX_DATA";
+            /** Ref */
+            ref: string;
         };
         /** ReferenceOut */
         ReferenceOut: {
@@ -2699,6 +2884,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HorizonApplyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maintenance_board_api_v1_maintenance_board_get: {
+        parameters: {
+            query?: {
+                base_code?: string | null;
+                squadron_code?: string | null;
+                type_code?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceBoardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_maintenance_task_api_v1_maintenance_tasks_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceTaskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maintenance_recommendations_api_v1_maintenance_recommendations_get: {
+        parameters: {
+            query?: {
+                mission_id?: number | null;
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissionMaintenanceOut"][];
                 };
             };
             /** @description Validation Error */

@@ -3,7 +3,11 @@
 Usage:  python -m app.seed.generator --anchor now --seed 42 --out data/poc.sqlite
 
 Steps: reference data → fleet → 18 months of simulated flights/defects (planted ML signal) → counters →
-healthy due state → demo scenarios SC-01…SC-16 (applied last, so they always hold) → app store.
+healthy due state → demo scenarios SC-01…SC-16 (applied last, so they always hold) → app store → fighters.
+
+Profiles: `golden` (default — the test and E2E data, DATABASE.md §6.2) and `extended` (`make demo`): the golden data
+unchanged plus 20 more aircraft with maintenance scenarios EX-01…EX-20, more missions and a pre-filled maintenance
+schedule, so every screen — the maintenance board above all — has something to try (DATABASE.md §6.6).
 """
 
 from __future__ import annotations
@@ -19,7 +23,8 @@ from pathlib import Path
 
 from argon2 import PasswordHasher
 from sqlalchemy import delete
-from sqlalchemy.orm import Session
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.clock import parse_utc
 from app.config import REPO_ROOT, get_settings
@@ -69,6 +74,7 @@ FIGHTERS: list[tuple[str, str, str]] = (
     + [(f"4X-R{i:02d}", "F-15I", "EST") for i in range(1, 5)]
 )
 FIGHTER_SEED_SALT = 0xF16
+IDLE_DAYS = {"4X-S07": 40}  # SC-05
 # Harmless open items on fighters (monitor / MEL deferrals well inside their limits) so the 3D viewer shows something.
 # (tail, title, ATA, zone, severity, opened days ago, deferral days left or None)
 FIGHTER_OPEN_MAS: list[tuple[str, str, int, str, str, float, float | None]] = [
@@ -76,6 +82,67 @@ FIGHTER_OPEN_MAS: list[tuple[str, str, int, str, str, float, float | None]] = [
     ("4X-F04", "נורית ניווט בכנף שמאל אינה פועלת", 33, "WING_L", "DEFERRED", 2, 30),
     ("4X-R02", "רעידות קלות במנוע מס׳ 2 בסל״ד גבוה", 72, "ENGINE_2", "MONITOR", 1, None),
     ("4X-R03", "דליפה הידראולית קלה בכן הנסע הראשי", 32, "GEAR_MAIN", "DEFERRED", 4, 40),
+]
+
+# ── Extended demo profile (`--profile extended`, `make demo`) — DATABASE.md §6.6 ─────────────────────────────────
+# Generated after the golden data from its own random stream: the 34 golden aircraft and every golden scenario stay
+# byte-identical; only extended aircraft get scenarios or assignments (plans are planning-only and never change
+# eligibility, so the pre-filled schedule may also cover golden tasks).
+EXTENDED_SEED_SALT = 0xE4D
+EXTENDED_SQUADRONS = [
+    ("SQ-13", "טייסת 13 — אימון דרום", "STH"),
+    ("SQ-23", "טייסת 23 — תובלה צפון", "NTH"),
+    ("SQ-32", "טייסת 32 — סילון דרום", "STH"),
+    ("SQ-43", "טייסת 43 — קרב (סופה ב׳)", "EST"),
+]
+EXTENDED_FLEET: list[tuple[str, str, str, str]] = (
+    [(f"4X-S{i:02d}", "SE-100", "STH", "SQ-13") for i in range(9, 15)]
+    + [(f"4X-P{i:02d}", "TP-200", "NTH", "SQ-23") for i in range(11, 17)]
+    + [(f"4X-J0{i}", "JT-300", "STH", "SQ-32") for i in range(7, 10)]
+    + [(f"4X-F{i:02d}", "F-16I", "EST", "SQ-43") for i in range(7, 12)]
+)
+EXTENDED_IDLE_DAYS = {"4X-S12": 35, "4X-J09": 50}  # EX-04, EX-15
+# Open missions short of aircraft (so maintenance recommendations show), fine ones, assigned and cancelled ones.
+# (name, type, status, count, start h from T0, hours, landings, T&G, base, engines, quals, type scope, assigned)
+EXTENDED_MISSIONS: list[tuple[str, str, str, int, float, float, int, int, str, str, tuple[str, ...],
+                              tuple[str, ...], tuple[str, ...]]] = [
+    ("תרגיל אימון לילה — דרום", "TRAINING", "DRAFT", 12, 58, 2.0, 1, 4, "STH", "SINGLE", ("NIGHT",), ("SE-100",), ()),
+    ("הטסת צוותים רפואיים", "TRANSPORT", "DRAFT", 12, 74, 3.0, 2, 0, "CEN", "MIN_2", ("MEDEVAC",), (), ()),
+    ("גיחות אימון קרב — שבוע הבא", "TRAINING", "DRAFT", 15, 126, 1.5, 1, 2, "EST", "ANY", ("NIGHT",),
+     ("F-16I", "F-15I"), ()),
+    ("טיסת מעבר לבסיס דרום", "FERRY", "DRAFT", 2, 28, 1.5, 1, 0, "CEN", "MIN_2", (), (), ()),
+    ("הובלת מטען לבסיס צפון", "TRANSPORT", "DRAFT", 3, 192, 2.5, 2, 0, "STH", "MIN_2", ("CARGO",), (), ()),
+    ("אימון בוקר — טייסת 13", "TRAINING", "ASSIGNED", 1, 20, 1.5, 1, 3, "STH", "SINGLE", (), (), ("4X-S14",)),
+    ("הובלת ציוד — טייסת 32", "TRANSPORT", "ASSIGNED", 1, 26, 3.0, 2, 0, "STH", "MIN_2", ("CARGO",), (), ("4X-J07",)),
+    # 4X-F09's annual inspection falls due before this one ⇒ dashboard alert "assigned mission lost eligibility"
+    ("תרגיל משותף — טייסת 43", "TRAINING", "ASSIGNED", 2, 216, 1.5, 1, 0, "EST", "ANY", (), (),
+     ("4X-F09", "4X-F11")),
+    ("טיסת הדגמה", "OTHER", "CANCELLED", 2, -72, 1.0, 1, 0, "CEN", "ANY", (), (), ()),
+]
+# Pre-filled maintenance schedule (FR-91). ref None = the aircraft's only task of that action.
+# (tail, action, ref, status, start h, end h, assignee, notes, updated h ago)
+EXTENDED_PLANS: list[tuple[str, str, str | None, str, float | None, float | None, str | None, str | None, float]] = [
+    ("4X-S03", "PERFORM_INSPECTION", "ANNUAL", "SCHEDULED", 22, 30, "צוות קו א׳", "האנגר 1 — לתאם גרר מהרחבה", 20),
+    ("4X-S09", "PERFORM_INSPECTION", "ANNUAL", "SCHEDULED", 46, 56, "צוות קו ב׳ — דרום", None, 6),
+    ("4X-P12", "RENEW_PERMIT", "INSURANCE", "SCHEDULED", 4, None, "מחלקת רכש", "הפוליסה החדשה נשלחה לחתימה", 3),
+    ("4X-F07", "PERFORM_INSPECTION", "PHASE", "SCHEDULED", 26, 74, "צוות פאזה — טייסת 43", "דרושים 2 טכנאי מנוע", 9),
+    ("4X-P06", "PERFORM_INSPECTION", "ANNUAL", "SCHEDULED", 50, 58, "צוות קו א׳", None, 30),
+    ("4X-J03", "RETURN_TO_SERVICE", "IN_MAINTENANCE", "IN_PROGRESS", -48, 24, "צוות מנועים",
+     "החלפת משאבת דלק — ממתין לחלק", 5),
+    ("4X-P14", "RETURN_TO_SERVICE", "IN_MAINTENANCE", "IN_PROGRESS", -20, 30, "צוות קו ב׳ — צפון", None, 2),
+    ("4X-J04", "CLOSE_MA", "MA-2026-00412", "IN_PROGRESS", -6, 10, "צוות מנועים", "איתור מקור הדליפה, החלפת אטם", 1),
+    ("4X-S11", "CLOSE_MA", None, "IN_PROGRESS", -3, 5, "צוות קו ב׳ — דרום", None, 3),
+    ("4X-P05", "RENEW_PERMIT", "COA", "DONE", -30, -2, "קצין אחזקה",
+     "נשלח לרשות התעופה — ממתין לעדכון ברשומות", 2),
+    ("4X-S07", "IDLE_CHECK", "IDLE_CHECK", "DONE", -5, -4, "צוות קו א׳",
+     "בדיקת קרקע בוצעה — טיסת הבדיקה טרם נרשמה", 4),
+    ("4X-F08", "CLOSE_MA", None, "DONE", -26, -3, "צוות הידראוליקה", None, 3),
+]
+# Done in the maintenance system after they were planned ⇒ shown as "verified" (EX-06, EX-14, EX-20).
+EXTENDED_VERIFIED: list[tuple[str, str, str | None, str, float]] = [
+    ("4X-S14", "PERFORM_INSPECTION", "ANNUAL", "צוות קו ב׳ — דרום", 48),
+    ("4X-J08", "RENEW_PERMIT", "RADIO", "קצין אחזקה", 30),
+    ("4X-F11", "CLOSE_MA", None, "צוות קו — טייסת 43", 26),
 ]
 
 
@@ -114,6 +181,7 @@ def _pick(rng: random.Random, options: tuple[tuple[str, float], ...]) -> str:
 class Generator:
     def __init__(self, session: Session, anchor: datetime, seed: int, demo_password: str) -> None:
         self.s = session
+        self.idle_days = dict(IDLE_DAYS)  # tails that stopped flying this many days before T0
         self.t0 = anchor
         self.rng = random.Random(seed)
         self.seed = seed
@@ -171,12 +239,13 @@ class Generator:
                 deferral_expires_at=None if deferral_days is None else self.t0 + timedelta(days=deferral_days)))
         self.s.flush()
 
-    def _aircraft(self, idx: int, tail: str, type_code: str, base: str) -> None:
+    def _aircraft(self, idx: int, tail: str, type_code: str, base: str, squadron: str | None = None) -> None:
         types = {t[0]: t for t in ref.AIRCRAFT_TYPES}
         age_years = self.rng.uniform(3, 18)
         row = orm.AircraftRow(
             aircraft_id=idx, tail_number=tail, serial_number=f"{type_code.replace('-', '')}-{idx:04d}",
-            type_code=type_code, base_code=base, squadron_code=squadron_of(type_code, base), status="OPERATIONAL",
+            type_code=type_code, base_code=base, squadron_code=squadron or squadron_of(type_code, base),
+            status="OPERATIONAL",
             manufacture_date=(self.t0 - timedelta(days=365 * age_years)).date(),
             last_flight_at=None, source_updated_at=self.t0)
         self.s.add(row)
@@ -197,7 +266,8 @@ class Generator:
                       fh_since_major=self.rng.uniform(0, major_interval * 0.8))
         start = self.t0 - timedelta(days=HISTORY_DAYS)
         st.events.append((start, fh0 - st.fh_since_major))  # major inspection before the history window
-        idle_cutoff =self.t0 - timedelta(days=40) if ac.tail_number == "4X-S07" else None
+        idle = self.idle_days.get(ac.tail_number)
+        idle_cutoff = self.t0 - timedelta(days=idle) if idle else None
         endurance = {t[0]: t[3] for t in ref.AIRCRAFT_TYPES}[ac.type_code]
         for d in range(HISTORY_DAYS):
             day = start + timedelta(days=d)
@@ -275,10 +345,11 @@ class Generator:
         for ma in st.mas:
             if ma.closed_at is not None and ma.closed_at >= t0:
                 ma.closed_at = t0 - timedelta(hours=1)
-        # Healthy aircraft flew within the last 1–6 days (S07 is the idle scenario).
+        # Healthy aircraft flew within the last 1–6 days (idle scenarios: IDLE_DAYS).
         last = max((f.landing_at for f in st.flights), default=None)
-        if ac.tail_number == "4X-S07":
-            takeoff = t0 - timedelta(days=40, hours=1.2)
+        idle = self.idle_days.get(ac.tail_number)
+        if idle:
+            takeoff = t0 - timedelta(days=idle, hours=1.2)
             self._fly(ac, st, engines, 0.0, "TRAINING", takeoff, 1.2, 1e9)
         elif last is None or t0 - last > timedelta(days=6):
             takeoff = t0 - timedelta(days=self.rng.uniform(1, 5))
@@ -344,6 +415,31 @@ class Generator:
         self.s.add(row)
         return row
 
+    # ── scenario helpers (by tail number) ────────────────────────────────
+    def _ac(self, tail: str) -> orm.AircraftRow:
+        return self.s.query(orm.AircraftRow).filter_by(tail_number=tail).one()
+
+    def _due(self, tail: str, code: str, unit: str) -> orm.AircraftInspectionDueRow:
+        row = self.s.get(orm.AircraftInspectionDueRow, (self._ac(tail).aircraft_id, code, unit))
+        assert row is not None, (tail, code, unit)
+        return row
+
+    def _counter(self, tail: str, unit: str) -> float:
+        row = self.s.get(orm.UsageCounterRow, (self._ac(tail).aircraft_id, unit))
+        assert row is not None
+        return row.value
+
+    def _permit_of(self, tail: str, code: str) -> orm.AircraftPermitRow:
+        return self.s.query(orm.AircraftPermitRow).filter_by(aircraft_id=self._ac(tail).aircraft_id,
+                                                             permit_type_code=code).one()
+
+    def _open_ma(self, tail: str, title: str, ata: int, zone: str, severity: str, opened_days_ago: float,
+                 **extra: object) -> None:
+        self.s.add(orm.MaintenanceActionRow(
+            ma_number=extra.pop("ma_number", None) or self._ma_number(), aircraft_id=self._ac(tail).aircraft_id,
+            title=title, ata_chapter=ata, zone_code=zone, severity=severity, status="OPEN",
+            opened_at=self.t0 - timedelta(days=opened_days_ago), source_updated_at=self.t0, **extra))
+
     # ── 6. demo scenarios (DATABASE.md §6.2) ────────────────────────────
     def scenarios(self) -> None:
         t0, s = self.t0, self.s
@@ -352,25 +448,7 @@ class Generator:
         def aid(tail: str) -> int:
             return by_tail[tail].aircraft_id
 
-        def due(tail: str, code: str, unit: str) -> orm.AircraftInspectionDueRow:
-            row = s.get(orm.AircraftInspectionDueRow, (aid(tail), code, unit))
-            assert row is not None, (tail, code, unit)
-            return row
-
-        def counter(tail: str, unit: str) -> float:
-            row = s.get(orm.UsageCounterRow, (aid(tail), unit))
-            assert row is not None
-            return row.value
-
-        def permit(tail: str, code: str) -> orm.AircraftPermitRow:
-            return s.query(orm.AircraftPermitRow).filter_by(aircraft_id=aid(tail), permit_type_code=code).one()
-
-        def open_ma(tail: str, title: str, ata: int, zone: str, severity: str, opened_days_ago: float,
-                    **extra: object) -> None:
-            s.add(orm.MaintenanceActionRow(
-                ma_number=extra.pop("ma_number", None) or self._ma_number(), aircraft_id=aid(tail), title=title,
-                ata_chapter=ata, zone_code=zone, severity=severity, status="OPEN",
-                opened_at=t0 - timedelta(days=opened_days_ago), source_updated_at=t0, **extra))
+        due, counter, permit, open_ma = self._due, self._counter, self._permit_of, self._open_ma
 
         due("4X-S03", "ANNUAL", "CAL_DAY").due_at = t0 - timedelta(days=1)                      # SC-01
         permit("4X-P05", "COA").expires_at = t0 - timedelta(days=3)                             # SC-02
@@ -415,6 +493,80 @@ class Generator:
         open_ma("4X-P10", "דליפת דלק קלה בכנף ימין", 28, "WING_R", "MONITOR", 1)
         s.flush()
 
+    # ── extended profile: more aircraft, scenarios and missions ─────────
+    def extended(self) -> None:
+        self.rng = random.Random(self.seed ^ EXTENDED_SEED_SALT)
+        self._add(*[orm.SquadronRow(squadron_code=c, name_he=n, base_code=b) for c, n, b in EXTENDED_SQUADRONS])
+        self.s.flush()
+        self.idle_days.update(EXTENDED_IDLE_DAYS)
+        first = len(FLEET) + len(FIGHTERS) + 1
+        for idx, (tail, type_code, base, squadron) in enumerate(EXTENDED_FLEET, start=first):
+            self._aircraft(idx, tail, type_code, base, squadron)
+        self._extended_scenarios()
+        self._extended_missions()
+        self.s.flush()
+
+    def _extended_scenarios(self) -> None:
+        t0, due, counter, permit, open_ma = self.t0, self._due, self._counter, self._permit_of, self._open_ma
+        due("4X-S09", "ANNUAL", "CAL_DAY").due_at = t0 - timedelta(days=4)                      # EX-01
+        due("4X-S10", "I50H", "FH").due_value = round(counter("4X-S10", "FH") + 2.0, 2)         # EX-02
+        open_ma("4X-S11", "לחץ שמן נמוך במנוע מס׳ 1", 79, "ENGINE_1", "GROUNDING", 1,             # EX-03
+                ma_number="MA-2026-00431", description="נורית לחץ שמן דלקה בהנעה")
+        # EX-04: 4X-S12 idle 35 days (EXTENDED_IDLE_DAYS)
+        permit("4X-S13", "COA").expires_at = t0 + timedelta(days=6)                             # EX-05
+        due("4X-S14", "ANNUAL", "CAL_DAY").due_at = t0 - timedelta(days=2)                      # EX-06 → verified
+        due("4X-P11", "A_CHECK", "FH").due_value = round(counter("4X-P11", "FH") + 3.0, 2)      # EX-07
+        permit("4X-P12", "INSURANCE").expires_at = t0 - timedelta(days=2)                       # EX-08
+        open_ma("4X-P13", "מכ״ם מזג אוויר — תצוגה מהבהבת", 34, "NOSE", "DEFERRED", 5,             # EX-09
+                ma_number="MA-2026-00432", mel_category="C", deferral_expires_at=t0 + timedelta(days=2),
+                affects_qualification_code="IFR")
+        self._ac("4X-P14").status = "IN_MAINTENANCE"                                            # EX-10
+        lg = counter("4X-P15", "LDG") + counter("4X-P15", "TG")                                 # EX-11
+        due("4X-P15", "LG_INSP", "LDG").due_value = round(lg + 8, 2)
+        p16 = self._ac("4X-P16").aircraft_id                                                    # EX-12: stale feed
+        for row in self.s.query(orm.UsageCounterRow).filter_by(aircraft_id=p16):
+            row.as_of = t0 - timedelta(days=3)
+        due("4X-J07", "C_CHECK", "CAL_DAY").due_at = t0 + timedelta(days=5)                     # EX-13
+        permit("4X-J08", "RADIO").expires_at = t0 - timedelta(days=1)                           # EX-14 → verified
+        # EX-15: 4X-J09 idle 50 days (EXTENDED_IDLE_DAYS)
+        due("4X-F07", "PHASE", "FH").due_value = round(counter("4X-F07", "FH") - 3.0, 2)        # EX-16
+        open_ma("4X-F08", "דליפה הידראולית בכן הנסע הראשי", 32, "GEAR_MAIN", "GROUNDING", 2,       # EX-17
+                ma_number="MA-2026-00433")
+        due("4X-F09", "ANNUAL", "CAL_DAY").due_at = t0 + timedelta(days=6)                      # EX-18
+        due("4X-F10", "ENG_BORESCOPE", "FH").due_value = round(counter("4X-F10", "FH") + 4.0, 2)  # EX-19
+        open_ma("4X-F11", "שחיקת צמיג ראשי מעבר למותר", 32, "GEAR_MAIN", "GROUNDING", 3,          # EX-20 → verified
+                ma_number="MA-2026-00434")
+        # harmless open items for the 3D viewer
+        open_ma("4X-S13", "שריטה בכיסוי המנוע", 71, "ENGINE_1", "MONITOR", 4)
+        open_ma("4X-J07", "נורית קריאה בתא הנוסעים אינה פועלת", 33, "FUSELAGE", "DEFERRED", 2, mel_category="D",
+                deferral_expires_at=t0 + timedelta(days=30))
+        self.s.flush()
+
+    def _extended_missions(self) -> None:
+        t0, s = self.t0, self.s
+        next_id = (s.query(orm.MissionRow.mission_id).order_by(orm.MissionRow.mission_id.desc()).first() or (0,))[0]
+        for (name, mtype, status, count, start_h, hours, ldg, tg, base, engines, quals, types,
+             assigned) in EXTENDED_MISSIONS:
+            next_id += 1
+            start = t0 + timedelta(hours=start_h)
+            s.add(orm.MissionRow(
+                mission_id=next_id, name=name, mission_type=mtype, status=status, required_aircraft_count=count,
+                start_at=start, est_duration_hours=hours, est_landings=ldg, est_touch_and_goes=tg,
+                est_engine_starts=1, departure_base_code=base, engine_requirement=engines, same_type_required=False,
+                priority=3, notes=None, overrides_json=None, created_by=2, created_at=t0 - timedelta(hours=12),
+                updated_at=t0 - timedelta(hours=12)))
+            s.flush()
+            s.add_all([orm.MissionQualificationRow(mission_id=next_id, qualification_code=q) for q in quals])
+            s.add_all([orm.MissionScopeRow(mission_id=next_id, kind="AIRCRAFT_TYPE", code=c) for c in types])
+            # window as the app computes it: duration + max(15 %, 0.3 h) buffer + 1 h turnaround
+            end = start + timedelta(hours=hours + max(hours * 0.15, 0.3) + 1)
+            for tail in assigned:
+                s.add(orm.MissionAssignmentRow(
+                    mission_id=next_id, aircraft_id=self._ac(tail).aircraft_id, run_id=None, set_index=None,
+                    window_start=start, window_end=end, status="ACTIVE", assigned_by=2,
+                    assigned_at=t0 - timedelta(hours=10)))
+        s.flush()
+
     # ── 7. app store ─────────────────────────────────────────────────────
     def app_store(self) -> None:
         t0, s = self.t0, self.s
@@ -457,7 +609,7 @@ class Generator:
         s.flush()
 
 
-def generate(out: Path, anchor: datetime, seed: int, demo_password: str) -> None:
+def generate(out: Path, anchor: datetime, seed: int, demo_password: str, profile: str = "golden") -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     for suffix in ("", "-wal", "-shm"):
         p = Path(str(out) + suffix)
@@ -474,8 +626,74 @@ def generate(out: Path, anchor: datetime, seed: int, demo_password: str) -> None
         gen.scenarios()
         gen.app_store()
         gen.fighters()
+        if profile == "extended":
+            gen.extended()
         session.commit()
+    if profile == "extended":
+        _seed_maintenance_plans(engine, anchor)
     engine.dispose()
+
+
+def _seed_maintenance_plans(engine: Engine, t0: datetime) -> None:
+    """Pre-filled maintenance schedule (FR-91), keyed to each task's real cycle as the app computes it.
+
+    "Verified" examples are planned first and then done in the source data (new due date, permit renewed, MA
+    closed), exactly how the board will later see real work being recorded.
+    """
+    from app.datasources.poc_sqlite import PocSqliteSource
+    from app.domain.compliance.status import aircraft_status
+    from app.domain.maintenance import TaskAction, aircraft_requirements, requirement_for
+    from app.domain.models import EvaluationContext
+
+    sf = sessionmaker(bind=engine)
+    snap = PocSqliteSource(sf).load_snapshot()
+    ctx = EvaluationContext(now=t0, required_permit_types=snap.required_permit_types,
+                            data_load_status=dict(snap.data_load_status))
+    policy, by_tail = PlanningPolicy(), {a.tail_number: a for a in snap.aircraft}
+
+    def requirement(tail: str, action: str, ref: str | None) -> tuple[int, str, str, str]:
+        ac = by_tail[tail]
+        st = aircraft_status(ac, policy, ctx)
+        if ref is None:
+            ref = next(r.ref for r in aircraft_requirements(ac, st) if r.action == action)
+        req = requirement_for(ac, st, TaskAction(action), ref)
+        return ac.aircraft_id, req.key, ref, req.fingerprint
+
+    def hours(h: float | None) -> datetime | None:
+        return None if h is None else t0 + timedelta(hours=h)
+
+    with sf() as s:
+        for tail, action, spec_ref, status, start, end, assignee, notes, ago in EXTENDED_PLANS:
+            aid, key, ref, fp = requirement(tail, action, spec_ref)
+            s.add(orm.MaintenancePlanRow(
+                item_key=key, aircraft_id=aid, tail_number=tail, action=action, ref=ref, fingerprint=fp,
+                status=status, planned_start=hours(start), planned_end=hours(end), assignee=assignee, notes=notes,
+                updated_by=3, updated_at=t0 - timedelta(hours=ago)))
+        for tail, action, spec_ref, assignee, ago in EXTENDED_VERIFIED:
+            aid, key, ref, fp = requirement(tail, action, spec_ref)
+            s.add(orm.MaintenancePlanRow(
+                item_key=key, aircraft_id=aid, tail_number=tail, action=action, ref=ref, fingerprint=fp,
+                status="DONE", planned_start=t0 - timedelta(hours=ago + 6), planned_end=t0 - timedelta(hours=ago),
+                assignee=assignee, notes=None, updated_by=3, updated_at=t0 - timedelta(hours=ago)))
+            # … and the maintenance system records the work
+            if action == "PERFORM_INSPECTION":
+                row = s.get(orm.AircraftInspectionDueRow, (aid, ref, "CAL_DAY"))
+                assert row is not None
+                row.last_done_at = t0 - timedelta(hours=ago)
+                row.due_at = row.last_done_at + timedelta(days=365)
+            elif action == "RENEW_PERMIT":
+                old = s.query(orm.AircraftPermitRow).filter_by(aircraft_id=aid, permit_type_code=ref).one()
+                permit_id = (s.query(orm.AircraftPermitRow.permit_id)
+                             .order_by(orm.AircraftPermitRow.permit_id.desc()).first() or (0,))[0] + 1
+                s.add(orm.AircraftPermitRow(
+                    permit_id=permit_id, aircraft_id=aid, permit_type_code=ref,
+                    permit_number=f"{old.permit_number}-R", issued_at=t0 - timedelta(hours=ago),
+                    expires_at=t0 - timedelta(hours=ago) + timedelta(days=365), restrictions=old.restrictions,
+                    status="ACTIVE", source_updated_at=t0))
+            else:  # CLOSE_MA
+                ma = s.query(orm.MaintenanceActionRow).filter_by(ma_number=ref).one()
+                ma.status, ma.closed_at = "CLOSED", t0 - timedelta(hours=ago)
+        s.commit()
 
 
 def _stamp_alembic_head(url: str) -> None:
@@ -501,13 +719,15 @@ def main() -> None:
     parser.add_argument("--anchor", default="now", help="ISO-8601 UTC anchor (T0) or 'now'")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", default=str(REPO_ROOT / "data" / "poc.sqlite"))
+    parser.add_argument("--profile", choices=("golden", "extended"), default="golden",
+                        help="golden = test/E2E data; extended = golden + more aircraft, missions and plans (demo)")
     args = parser.parse_args()
     anchor = datetime.now(tz=UTC) if args.anchor == "now" else parse_utc(args.anchor)
     password = get_settings().demo_password or os.environ.get("APP_DEMO_PASSWORD")
     if not password:
         raise SystemExit("APP_DEMO_PASSWORD is not set (copy .env.example to .env)")
-    generate(Path(args.out), _floor_hour(anchor), args.seed, password)
-    print(f"Seeded {args.out} with anchor {_floor_hour(anchor).isoformat()}")
+    generate(Path(args.out), _floor_hour(anchor), args.seed, password, args.profile)
+    print(f"Seeded {args.out} ({args.profile}) with anchor {_floor_hour(anchor).isoformat()}")
 
 
 if __name__ == "__main__":

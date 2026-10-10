@@ -48,6 +48,7 @@ backend/
     clock.py                    # Clock protocol, SystemClock, FrozenClock
     api/v1/
       aircraft.py fleet.py missions.py optimization.py reference.py ml.py settings.py audit.py auth.py health.py
+      (maintenance board / tasks / recommendations — API.md §3.8)
     schemas/                    # Pydantic DTOs (request/response) — API.md is the contract
     domain/
       models.py                 # frozen dataclasses: Aircraft, Limit, Permit, MaintenanceAction, Mission, ...
@@ -62,6 +63,7 @@ backend/
         cpsat_selector.py       # CP-SAT model + alternatives (OPT §5)
         horizon.py              # multi-mission planner + independent plan checker (FR-46)
         result.py
+      maintenance.py            # tasks from fleet status, due cycles, verified recommendations (OPT §2.9, FR-90…92)
     ml/
       features.py risk_model.py utilization.py duration_buffer.py registry.py train.py
     services/                   # orchestration: FleetService, MissionService, OptimizationService, AuditService

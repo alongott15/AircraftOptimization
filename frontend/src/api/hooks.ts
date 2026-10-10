@@ -13,8 +13,12 @@ import type {
   FlightRow,
   HangarCapacity,
   HorizonPlan,
+  MaintenanceBoard,
+  MaintenanceItem,
+  MaintenanceTaskInput,
   Mission,
   MissionInput,
+  MissionMaintenance,
   MissionPage,
   Model,
   OptimizationRun,
@@ -50,6 +54,8 @@ export const qk = {
   tgWeights: ['settings', 'tg-weights'] as const,
   models: ['ml', 'models'] as const,
   audit: (q: Query) => ['audit', q] as const,
+  maintenanceBoard: (q: Query) => ['maintenance', 'board', q] as const,
+  maintenanceRecs: (missionId: number | null) => ['maintenance', 'recommendations', missionId] as const,
 };
 
 export const useMe = () =>
@@ -121,6 +127,24 @@ export const useModels = () => useQuery({ queryKey: qk.models, queryFn: () => ap
 export const useAudit = (q: Query) =>
   useQuery({ queryKey: qk.audit(q), queryFn: () => api<AuditPage>('/audit', { query: q }), retry });
 
+/** FR-90: the maintenance board — required work merged with the manual schedule. */
+export const useMaintenanceBoard = (q: Query) =>
+  useQuery({
+    queryKey: qk.maintenanceBoard(q),
+    queryFn: () => api<MaintenanceBoard>('/maintenance/board', { query: q }),
+    retry,
+  });
+
+/** FR-92: maintenance that would make excluded aircraft eligible — one mission, or open missions in 14 days. */
+export const useMaintenanceRecommendations = (missionId: number | null = null, enabled = true) =>
+  useQuery({
+    queryKey: qk.maintenanceRecs(missionId),
+    queryFn: () =>
+      api<MissionMaintenance[]>('/maintenance/recommendations', { query: missionId ? { mission_id: missionId } : {} }),
+    enabled,
+    retry,
+  });
+
 export const useDurationSuggestion = (q: Query, enabled: boolean) =>
   useQuery({
     queryKey: ['ml', 'duration', q],
@@ -166,6 +190,19 @@ export function useUpdateMission() {
     onSuccess: (m) => {
       qc.setQueryData(qk.mission(m.mission_id), m);
       void qc.invalidateQueries({ queryKey: ['missions', 'list'] });
+    },
+  });
+}
+
+/** FR-91: manual schedule of a maintenance task (planning only — never changes eligibility). */
+export function useUpdateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: MaintenanceTaskInput) => api<MaintenanceItem>('/maintenance/tasks', { method: 'PUT', body }),
+    onSuccess: (item) => {
+      qc.setQueriesData<MaintenanceBoard>({ queryKey: ['maintenance', 'board'] }, (old) =>
+        old && { ...old, items: old.items.map((i) => (i.item_key === item.item_key ? item : i)) });
+      void qc.invalidateQueries({ queryKey: ['maintenance'] });
     },
   });
 }

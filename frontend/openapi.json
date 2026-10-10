@@ -946,6 +946,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -986,6 +988,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1038,6 +1042,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1080,6 +1086,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1122,6 +1130,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1181,6 +1191,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1269,6 +1281,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1325,6 +1339,8 @@
       "required": true,
       "schema": {
        "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
        "title": "Mission Id"
       }
      }
@@ -1463,6 +1479,195 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/HorizonApplyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/maintenance/board": {
+   "get": {
+    "tags": [
+     "maintenance"
+    ],
+    "summary": "Maintenance Board",
+    "operationId": "maintenance_board_api_v1_maintenance_board_get",
+    "parameters": [
+     {
+      "name": "base_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Base Code"
+      }
+     },
+     {
+      "name": "squadron_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Squadron Code"
+      }
+     },
+     {
+      "name": "type_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Type Code"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MaintenanceBoardOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/maintenance/tasks": {
+   "put": {
+    "tags": [
+     "maintenance"
+    ],
+    "summary": "Update Maintenance Task",
+    "operationId": "update_maintenance_task_api_v1_maintenance_tasks_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MaintenanceTaskIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MaintenanceItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/maintenance/recommendations": {
+   "get": {
+    "tags": [
+     "maintenance"
+    ],
+    "summary": "Maintenance Recommendations",
+    "operationId": "maintenance_recommendations_api_v1_maintenance_recommendations_get",
+    "parameters": [
+     {
+      "name": "mission_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 2147483647,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Mission Id"
+      }
+     },
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 60,
+       "minimum": 1,
+       "default": 14,
+       "title": "Days"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/MissionMaintenanceOut"
+         },
+         "title": "Response Maintenance Recommendations Api V1 Maintenance Recommendations Get"
         }
        }
       }
@@ -3933,6 +4138,323 @@
     ],
     "title": "MaintenanceActionOut"
    },
+   "MaintenanceBoardOut": {
+    "properties": {
+     "as_of": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "As Of"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/MaintenanceItemOut"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "as_of",
+     "items"
+    ],
+    "title": "MaintenanceBoardOut"
+   },
+   "MaintenanceItemOut": {
+    "properties": {
+     "card_id": {
+      "type": "string",
+      "title": "Card Id"
+     },
+     "item_key": {
+      "type": "string",
+      "title": "Item Key"
+     },
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "base_code": {
+      "type": "string",
+      "title": "Base Code"
+     },
+     "squadron_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Squadron Code"
+     },
+     "action": {
+      "type": "string",
+      "enum": [
+       "PERFORM_INSPECTION",
+       "RENEW_PERMIT",
+       "CLOSE_MA",
+       "RENEW_QUALIFICATION",
+       "IDLE_CHECK",
+       "RETURN_TO_SERVICE",
+       "FIX_DATA"
+      ],
+      "title": "Action"
+     },
+     "ref": {
+      "type": "string",
+      "title": "Ref"
+     },
+     "compliance_status": {
+      "type": "string",
+      "enum": [
+       "EXPIRED",
+       "EXPIRING_SOON",
+       "OK",
+       "UNKNOWN"
+      ],
+      "title": "Compliance Status"
+     },
+     "blocking": {
+      "type": "boolean",
+      "title": "Blocking"
+     },
+     "due_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due At"
+     },
+     "remaining": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remaining"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit"
+     },
+     "zone_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Zone Code"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "REQUIRED",
+       "SCHEDULED",
+       "IN_PROGRESS",
+       "DONE",
+       "VERIFIED"
+      ],
+      "title": "Status"
+     },
+     "planned_start": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Planned Start"
+     },
+     "planned_end": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Planned End"
+     },
+     "assignee": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assignee"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     },
+     "unblocks": {
+      "items": {
+       "$ref": "#/components/schemas/MissionRefOut"
+      },
+      "type": "array",
+      "title": "Unblocks"
+     }
+    },
+    "type": "object",
+    "required": [
+     "card_id",
+     "item_key",
+     "aircraft_id",
+     "tail_number",
+     "type_code",
+     "base_code",
+     "squadron_code",
+     "action",
+     "ref",
+     "compliance_status",
+     "blocking",
+     "due_at",
+     "remaining",
+     "unit",
+     "zone_code",
+     "status",
+     "planned_start",
+     "planned_end",
+     "assignee",
+     "notes",
+     "updated_at",
+     "unblocks"
+    ],
+    "title": "MaintenanceItemOut"
+   },
+   "MaintenanceTaskIn": {
+    "properties": {
+     "item_key": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 3,
+      "pattern": "^\\d{1,10}:[A-Z_]{1,24}:[^\\x00-\\x1f\\x7f]{1,80}$",
+      "title": "Item Key"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "REQUIRED",
+       "SCHEDULED",
+       "IN_PROGRESS",
+       "DONE"
+      ],
+      "title": "Status"
+     },
+     "planned_start": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Planned Start"
+     },
+     "planned_end": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Planned End"
+     },
+     "assignee": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assignee"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "item_key",
+     "status"
+    ],
+    "title": "MaintenanceTaskIn"
+   },
    "MissionIn": {
     "properties": {
      "name": {
@@ -4093,6 +4615,71 @@
      "departure_base_code"
     ],
     "title": "MissionIn"
+   },
+   "MissionMaintenanceOut": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "start_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start At"
+     },
+     "required": {
+      "type": "integer",
+      "title": "Required"
+     },
+     "eligible_count": {
+      "type": "integer",
+      "title": "Eligible Count"
+     },
+     "shortfall": {
+      "type": "integer",
+      "title": "Shortfall"
+     },
+     "complete_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Complete By"
+     },
+     "candidates": {
+      "items": {
+       "$ref": "#/components/schemas/RecommendedAircraftOut"
+      },
+      "type": "array",
+      "title": "Candidates"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "name",
+     "start_at",
+     "required",
+     "eligible_count",
+     "shortfall",
+     "complete_by",
+     "candidates"
+    ],
+    "title": "MissionMaintenanceOut"
    },
    "MissionOut": {
     "properties": {
@@ -4347,6 +4934,36 @@
     "type": "object",
     "title": "MissionOverridesIn",
     "description": "Per-mission planner choices. Calendar/landing buffers are admin policy only (FR-34 replaced them in the form);\n`duration_buffer_pct` (from the ML suggestion, FR-52) can only make the FH buffer stricter than the policy."
+   },
+   "MissionRefOut": {
+    "properties": {
+     "mission_id": {
+      "type": "integer",
+      "title": "Mission Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "start_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission_id",
+     "name",
+     "start_at"
+    ],
+    "title": "MissionRefOut"
    },
    "ModelOut": {
     "properties": {
@@ -5209,6 +5826,74 @@
      "code"
     ],
     "title": "ReasonOut"
+   },
+   "RecommendedAircraftOut": {
+    "properties": {
+     "aircraft_id": {
+      "type": "integer",
+      "title": "Aircraft Id"
+     },
+     "tail_number": {
+      "type": "string",
+      "title": "Tail Number"
+     },
+     "type_code": {
+      "type": "string",
+      "title": "Type Code"
+     },
+     "base_code": {
+      "type": "string",
+      "title": "Base Code"
+     },
+     "tasks": {
+      "items": {
+       "$ref": "#/components/schemas/RecommendedTaskOut"
+      },
+      "type": "array",
+      "title": "Tasks"
+     }
+    },
+    "type": "object",
+    "required": [
+     "aircraft_id",
+     "tail_number",
+     "type_code",
+     "base_code",
+     "tasks"
+    ],
+    "title": "RecommendedAircraftOut"
+   },
+   "RecommendedTaskOut": {
+    "properties": {
+     "item_key": {
+      "type": "string",
+      "title": "Item Key"
+     },
+     "action": {
+      "type": "string",
+      "enum": [
+       "PERFORM_INSPECTION",
+       "RENEW_PERMIT",
+       "CLOSE_MA",
+       "RENEW_QUALIFICATION",
+       "IDLE_CHECK",
+       "RETURN_TO_SERVICE",
+       "FIX_DATA"
+      ],
+      "title": "Action"
+     },
+     "ref": {
+      "type": "string",
+      "title": "Ref"
+     }
+    },
+    "type": "object",
+    "required": [
+     "item_key",
+     "action",
+     "ref"
+    ],
+    "title": "RecommendedTaskOut"
    },
    "ReferenceOut": {
     "properties": {

@@ -61,7 +61,8 @@ docs/               Specs (this folder is the source of truth for requirements)
 
 ```
 make setup      # .env with generated secrets (scripts/init_env.py), backend (uv) + frontend (pnpm) deps, Playwright
-make demo       # = make seed train: data/poc.sqlite anchored to now + trained models (re-run before a demo)
+make demo       # = make seed train: data/poc.sqlite anchored to now (extended profile: golden data + 20 aircraft,
+                #   missions and a pre-filled maintenance schedule — DATABASE.md §6.6) + trained models
 make migrate    # apply Alembic migrations to the app store (existing data/poc.sqlite after a pull; fleet-table
                 #   changes such as the FR-35 squadron table need `make demo` — it recreates the demo DB)
 make user       # create a personal local login (prompts; default role ADMIN) — re-run after make demo
@@ -79,19 +80,21 @@ Demo users: `admin`, `planner`, `maint`, `ops` — password = `APP_DEMO_PASSWORD
 
 Done: compliance engine (R1–R13 + later-assignment protection, fail-safe data rules OPT §2.4a, commitments counted
 since the counter snapshot with per-flight buffers, unblock hints), scoring + CP-SAT selector with alternatives &
-hangar term, multi-mission horizon planner (FR-46), ML (defect risk AUC≈0.72 with fighters, utilization EWMA, duration-buffer P90)
+hangar term, multi-mission horizon planner (FR-46), ML (defect risk AUC≈0.69 on the extended demo data, utilization EWMA, duration-buffer P90)
 with SHA-256 registry, seed generator with SC-01…SC-17 (34 aircraft incl. F-16I/F-15I fighter squadrons at EST), FastAPI API (local + OIDC SSO keyed by issuer|subject, CSRF,
-RBAC, jti revocation, append-only audit, problem+json), Alembic migrations for the app store (`0001`–`0004`),
+RBAC, jti revocation, append-only audit, problem+json), Alembic migrations for the app store (`0001`–`0005`),
 Vertica adapter over `ao_v_*` views (defensive parsing, verified TLS in prod, contract-tested on SQLite), Hebrew RTL
 React app (dashboard, fleet + 3D apron, aircraft + realistic procedural 3D models — trainer, turboprop, business jet,
 F-16-/F-15-like fighters — + 2D fallback, mission planner/edit/draft/results/assign,
 horizon planning, missions, settings incl. editable score weights / tolerance policy / touch-and-go weights,
 audit; dashboard alerts for assigned missions that lost eligibility; 14/30/90-day timeline; expiration bands
 "תוך … ועד …" per activity unit — mission ranking preference FR-34 replacing the buffer fields, fleet filters FR-14; mission scope by
-squadron and aircraft type FR-35), `make user` CLI, CI
+squadron and aircraft type FR-35; maintenance board "לוח תחזוקה" FR-90…92 — kanban of required maintenance with manual
+scheduling by drag & drop / keyboard menu, `MAINTAIN` permission, and engine-verified recommendations of the maintenance
+that would make excluded aircraft eligible for missions short of aircraft, OPT §2.9), `make user` CLI, CI
 workflow, Docker compose verified. Security review and two compliance-safety review passes (2026-10-09) addressed.
-Tests: 416 backend (+1 perf, +1 real-Vertica skip), 31 vitest, 13 Playwright E2E. PRD §6 FR-01…FR-82 audited
-2026-10-09: all implemented.
+Tests: 437 backend (+1 perf, +1 real-Vertica skip), 33 vitest, 15 Playwright E2E. PRD §6 FR-01…FR-82 audited
+2026-10-09: all implemented; FR-90…92 added 2026-10-10.
 
 Not yet: native-speaker review of `he.ts` (self-reviewed only); integration against a real Vertica and a real IdP
 (both covered only by contract/mocked tests); production deployment (TLS termination, PostgreSQL app store, secrets

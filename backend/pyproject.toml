@@ -93,6 +93,12 @@ source_modules = ["app.domain.compliance"]
 forbidden_modules = ["app.domain.optimization"]
 
 [[tool.importlinter.contracts]]
+name = "Compliance does not depend on maintenance planning"
+type = "forbidden"
+source_modules = ["app.domain.compliance"]
+forbidden_modules = ["app.domain.maintenance"]
+
+[[tool.importlinter.contracts]]
 name = "API does not touch the DB directly"
 type = "forbidden"
 source_modules = ["app.api"]

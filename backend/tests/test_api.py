@@ -64,6 +64,9 @@ ROUTES = [
     ("PUT", "/api/v1/settings/tg-weights", {"admin"}),
     ("PUT", "/api/v1/settings/hangar-capacity", {"admin"}),
     ("GET", "/api/v1/audit", {"maint", "admin"}),
+    ("GET", "/api/v1/maintenance/board", ALL),
+    ("PUT", "/api/v1/maintenance/tasks", {"maint", "admin"}),
+    ("GET", "/api/v1/maintenance/recommendations", ALL),
 ]
 PUBLIC = {"/api/v1/health", "/api/v1/ready", "/api/v1/auth/login", "/api/v1/auth/config",
           "/api/v1/auth/oidc/login", "/api/v1/auth/oidc/callback"}
@@ -74,7 +77,8 @@ BODIES = {"/api/v1/missions": M_A, "/api/v1/eligibility/check": {"mission": M_A}
           "/api/v1/settings/weights": {"presets": {"BALANCED": {"risk": 0.3, "best_fit": 0.25, "balance": 0.15,
                                                                 "capacity": 0.15, "base_match": 0.1, "warnings": 0.05,
                                                                 "expiry_window": 0.1}}},
-          "/api/v1/settings/tg-weights": []}
+          "/api/v1/settings/tg-weights": [],
+          "/api/v1/maintenance/tasks": {"item_key": "1:PERFORM_INSPECTION:X", "status": "REQUIRED"}}
 
 
 def test_every_route_is_in_the_matrix(client: TestClient) -> None:

@@ -206,6 +206,20 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
 - **FR-81 (M)** Keyboard accessible, WCAG 2.2 AA contrast; screen-reader labels in Hebrew.
 - **FR-82 (S)** Light and dark themes (ops rooms often dark).
 
+### 6.10 Maintenance planning (לוח תחזוקה)
+- **FR-90 (M)** Maintenance board: a kanban of every maintenance task the fleet needs, derived from the compliance
+  status — perform an inspection, renew a permit, close a grounding / deferred MA, renew a qualification, idle check,
+  return to service, complete missing data — for items that are expired, expiring soon or unknown. Lanes: נדרש,
+  מתוכנן, בביצוע, בוצע — ממתין לאימות, אומת בנתוני התחזוקה. Cards show tail, task, status (color + icon + text),
+  "מונע כשירות" when the task blocks eligibility, due date or remaining units, schedule and the missions it unblocks.
+  Filters: type, base, squadron, blocking only, needed by missions only.
+- **FR-91 (M)** Manual scheduling: maintenance controllers (and admins) move cards by drag & drop or a keyboard
+  menu and set planned start/end, assignee and notes; a scheduled or in-progress task needs a start time.
+  Every change is audited (`MAINT_TASK_UPDATE`). Read-only for every other role.
+- **FR-92 (M)** Maintenance recommendations: for each open mission in the next 14 days that is short of aircraft,
+  list the excluded aircraft that maintenance would make eligible and exactly which tasks, to be completed before
+  the mission starts. Shown on the board and in the shortfall alert of the mission results.
+
 ## 7. Business rules
 
 - **BR-01 Whichever first.** An inspection with several limits is due at the earliest limit reached.
@@ -231,6 +245,20 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
 - **BR-13 Fail-safe.** Missing/stale data for any limit applicable to the aircraft ⇒ `DATA_MISSING` (ineligible).
 - **BR-14 ML boundary.** ML values never change eligibility; they only change scores of eligible aircraft.
 - **BR-15 All reasons.** The engine evaluates all rules and returns every failing reason, not just the first.
+- **BR-16 A plan is not a fact.** Moving a maintenance card (even to "done") never changes eligibility. A task
+  is verified only when readable source data shows it done: every limit of the planned cycle present and now due
+  strictly later, the MA occurrence closed (not merely unreadable), the aircraft operational or flown since, the data
+  present. A plan belongs to one task cycle (one row per cycle) and never carries over to the next one; data that
+  disappears, becomes unreadable or moves earlier is never "done" (S1).
+- **BR-17 Verified recommendations only.** A maintenance recommendation is listed only if the unchanged compliance
+  engine finds the aircraft eligible for the mission after the tasks are simulated on a copy of its data. Missing
+  data is never simulated away, usage-limited permits are not assumed renewed, and an aircraft excluded for any
+  non-maintenance reason (engines, endurance, permit restriction, scope, assignment…) is never recommended.
+- **BR-18 What-if assumptions** (recommendations only, never eligibility — confirm, §12 item 9): an inspection
+  restarts every limit from the earlier of now and its old due point (an overflown limit restarts from where it was
+  due); a renewal repeats the previous active permit's / qualification's validity length and keeps every restriction
+  any permit of that type carried (no previous dated validity ⇒ not simulated); an idle check is a check flight
+  recorded now (1 FH, 1 landing, 1 cycle, one start per engine); absurd source values ⇒ not simulated.
 
 ## 8. Key user flows
 
@@ -241,6 +269,9 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
    accepts → assignment saved.
 3. **What blocks this aircraft? (planner):** in results, expands an excluded aircraft → sees all reasons and
    "what would unblock" (e.g. "ביצוע בדיקת נחיתה" or "קיצור הטיסה ל-2.1 שעות").
+4. **Plan maintenance (maintenance controller):** לוח תחזוקה → sees the missions short of aircraft and the
+   recommended tasks → drags `4X-S03`'s annual inspection to "מתוכנן" and sets start, team and notes → the card waits
+   in "בוצע — ממתין לאימות" after the work until the maintenance data shows it done.
 
 ## 9. Non-functional requirements
 
@@ -279,6 +310,9 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
 7. Fleet → 3D apron: the fighter squadrons at בסיס מזרח (F-16I-like `4X-F*`, F-15I-like `4X-R*` in desert camouflage).
    Mission "גיחת אימון קרב": 4 aircraft, NIGHT, 1.5 h, scope = squadrons 41 + 42 → only fighters are candidates
    (`SQUADRON_NOT_SELECTED` for the rest); switch the scope to type F-15I → only `4X-R*` remain.
+8. Mission "הובלת נוסעים" for 9 aircraft → shortfall alert lists the maintenance that would close the gap
+   (e.g. `4X-P02` 100 h inspection, `4X-J04` close MA). Open לוח תחזוקה as `maint`: schedule the inspection by
+   dragging the card; mark the MA "done" — the aircraft stays ineligible until the maintenance data shows it.
 
 ## 12. Open questions (confirm with the business before production)
 
@@ -290,3 +324,6 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
 6. Identity provider (Azure AD / Keycloak / ADFS) and role mapping.
 7. Real fleet size, types, and availability of 3D models (glTF) per type.
 8. Should hangar capacity be modelled per base, per type, or per inspection class?
+9. Maintenance what-if (recommendations only, BR-18): is a renewal really issued for the same period as the previous
+   permit/qualification? Is the idle check a recorded check flight, and its usage (POC: 1 FH, 1 landing, 1 cycle,
+   one start per engine)? Does the MRO system keep an MA's number and opening time when it is re-opened?

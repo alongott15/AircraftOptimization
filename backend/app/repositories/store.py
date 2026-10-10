@@ -13,6 +13,8 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from app.db import orm
@@ -274,3 +276,27 @@ def register_model(s: Session, row: orm.MlModelRow) -> None:
                                                       orm.MlModelRow.status == "ACTIVE")):
         old.status = "ARCHIVED"
     s.add(row)
+
+
+# ── maintenance plan (FR-91) ────────────────────────────────────────────
+def maintenance_plans(s: Session) -> list[orm.MaintenancePlanRow]:
+    return list(s.scalars(select(orm.MaintenancePlanRow).order_by(orm.MaintenancePlanRow.item_key,
+                                                                   orm.MaintenancePlanRow.plan_id)))
+
+
+def get_maintenance_plan(s: Session, item_key: str, fingerprint: str) -> orm.MaintenancePlanRow | None:
+    return s.scalars(select(orm.MaintenancePlanRow).where(orm.MaintenancePlanRow.item_key == item_key,
+                                                          orm.MaintenancePlanRow.fingerprint == fingerprint)).first()
+
+
+def plan_for_cycle(s: Session, *, item_key: str, fingerprint: str, aircraft_id: int, tail_number: str, action: str,
+                   ref: str, now: datetime) -> orm.MaintenancePlanRow:
+    """The plan row of this task cycle, created if missing — race-safe (INSERT … ON CONFLICT DO NOTHING)."""
+    dialect = s.get_bind().dialect.name
+    insert = pg_insert if dialect == "postgresql" else sqlite_insert
+    s.execute(insert(orm.MaintenancePlanRow).values(
+        item_key=item_key, fingerprint=fingerprint, aircraft_id=aircraft_id, tail_number=tail_number, action=action,
+        ref=ref, status="REQUIRED", updated_at=now).on_conflict_do_nothing(index_elements=["item_key", "fingerprint"]))
+    row = get_maintenance_plan(s, item_key, fingerprint)
+    assert row is not None
+    return row

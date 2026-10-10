@@ -69,6 +69,8 @@ recommendations; **safety** principles make sure the software can never make an 
 | Create/edit missions, optimize, assign, cancel | | ✓ | | ✓ |
 | What-if eligibility check | | ✓ | ✓ | ✓ |
 | View audit log | | | ✓ | ✓ |
+| View maintenance board & recommendations | ✓ | ✓ | ✓ | ✓ |
+| Schedule maintenance tasks (`MAINTAIN`) — planning only, never changes eligibility | | | ✓ | ✓ |
 | Edit planning policy, weights, hangar capacity | | | | ✓ |
 | Retrain ML models | | | | ✓ |
 
@@ -77,6 +79,9 @@ the enforcement point. Each endpoint has an authorization test (TESTING.md §3.5
 
 ## 4. Data protection
 - Data classification: operational/internal. No passenger PII. User data limited to username, display name, role.
+  Maintenance schedules (FR-91) add free text — `assignee` (≤ 80, a team or person) and `notes` (≤ 500) — which may
+  name people and is copied into the append-only audit log; prefer team names. Control and bidi-formatting
+  characters are rejected (NUL breaks PostgreSQL; overrides could disguise text in the RTL UI).
 - TLS everywhere in production (nginx terminates TLS; backend ↔ Vertica TLS).
 - SQLite POC file contains synthetic data only — never copy real lake data into it.
 - Logs: no secrets, no tokens, no full payloads; tail numbers and IDs are fine. A structlog processor redacts keys
@@ -125,7 +130,7 @@ the enforcement point. Each endpoint has an authorization test (TESTING.md §3.5
 `LOGIN`, `LOGIN_FAILED`, `LOGOUT`, `MISSION_CREATE`, `MISSION_UPDATE`, `MISSION_CANCEL`, `OPTIMIZE`, `ASSIGN`,
 `ASSIGN_CANCEL`, `POLICY_UPDATE` (before/after), `HANGAR_CAPACITY_UPDATE`, `MODEL_RETRAIN`, `FORCE_INCLUDE_REJECTED`,
 `HORIZON_PLAN`, `HORIZON_ASSIGN`, `WEIGHTS_UPDATE` (before/after), `TG_WEIGHTS_UPDATE` (before/after),
-`USER_CREATE`, `USER_PASSWORD_SET`.
+`USER_CREATE`, `USER_PASSWORD_SET`, `MAINT_TASK_UPDATE` (before/after).
 
 `audit_log` is append-only in the database as well: UPDATE/DELETE triggers (SQLite + PostgreSQL, Alembic `0002` and the
 POC `create_all` path) abort any change. In production also grant the app role `INSERT, SELECT` only on that table.

@@ -9,10 +9,20 @@ from datetime import time as clock_time
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, BackgroundTasks, Query, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Path, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
-from app.api.deps import Admin, Auditor, ContainerDep, Planner, SessionDep, UserDep, Viewer, WhatIf
+from app.api.deps import (
+    Admin,
+    Auditor,
+    ContainerDep,
+    Maintainer,
+    Planner,
+    SessionDep,
+    UserDep,
+    Viewer,
+    WhatIf,
+)
 from app.api.schemas import (
     AircraftDetailOut,
     AircraftSummaryOut,
@@ -33,7 +43,11 @@ from app.api.schemas import (
     HorizonIn,
     HorizonPlanOut,
     LoginIn,
+    MaintenanceBoardOut,
+    MaintenanceItemOut,
+    MaintenanceTaskIn,
     MissionIn,
+    MissionMaintenanceOut,
     MissionOut,
     ModelOut,
     OptimizationRunOut,
@@ -61,11 +75,13 @@ from app.security.auth import (
     revoke_session_token,
 )
 from app.security.oidc import STATE_COOKIE, STATE_TTL_S, OidcError
-from app.services import admin, fleet, horizon, missions, optimization
+from app.services import admin, fleet, horizon, maintenance, missions, optimization
 from app.services.context import load_context
 from app.services.errors import ServiceError, validation
 
 router = APIRouter(prefix="/api/v1")
+MAX_ID = 2_147_483_647  # ids beyond a 32-bit integer cannot exist; reject before the database sees them
+MissionId = Annotated[int, Path(ge=1, le=MAX_ID)]
 ISRAEL = ZoneInfo("Asia/Jerusalem")
 READY_TTL_S = 10.0
 
@@ -343,12 +359,12 @@ def list_missions(_: Viewer, c: ContainerDep, s: SessionDep, status: str | None 
 
 
 @router.get("/missions/{mission_id}", response_model=MissionOut, tags=["missions"])
-def get_mission(mission_id: int, _: Viewer, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
+def get_mission(mission_id: MissionId, _: Viewer, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
     return _mission_out(c, s, missions.get_mission_or_404(s, mission_id))
 
 
 @router.patch("/missions/{mission_id}", response_model=MissionOut, tags=["missions"])
-def update_mission(mission_id: int, body: MissionIn, request: Request, user: Planner, c: ContainerDep,
+def update_mission(mission_id: MissionId, body: MissionIn, request: Request, user: Planner, c: ContainerDep,
                    s: SessionDep) -> dict[str, Any]:
     m = missions.get_mission_or_404(s, mission_id)
     by_tail = {a.tail_number: a.aircraft_id for a in c.ds.load_snapshot().aircraft}
@@ -359,7 +375,7 @@ def update_mission(mission_id: int, body: MissionIn, request: Request, user: Pla
 
 
 @router.post("/missions/{mission_id}/duplicate", response_model=MissionOut, status_code=201, tags=["missions"])
-def duplicate_mission(mission_id: int, request: Request, user: Planner, c: ContainerDep, s: SessionDep
+def duplicate_mission(mission_id: MissionId, request: Request, user: Planner, c: ContainerDep, s: SessionDep
                       ) -> dict[str, Any]:
     m = missions.duplicate(s, missions.get_mission_or_404(s, mission_id), user.user_id, c.clock.now())
     _audit(request, s, c, user.user_id, "MISSION_CREATE", "mission", str(m.mission_id),
@@ -368,7 +384,7 @@ def duplicate_mission(mission_id: int, request: Request, user: Planner, c: Conta
 
 
 @router.post("/missions/{mission_id}/cancel", response_model=MissionOut, tags=["missions"])
-def cancel_mission(mission_id: int, request: Request, user: Planner, c: ContainerDep, s: SessionDep
+def cancel_mission(mission_id: MissionId, request: Request, user: Planner, c: ContainerDep, s: SessionDep
                    ) -> dict[str, Any]:
     m = missions.get_mission_or_404(s, mission_id)
     missions.cancel(s, m, c.clock.now())
@@ -377,7 +393,7 @@ def cancel_mission(mission_id: int, request: Request, user: Planner, c: Containe
 
 
 @router.post("/missions/{mission_id}/optimize", response_model=OptimizationRunOut, tags=["optimization"])
-def optimize(mission_id: int, user: Planner, c: ContainerDep, s: SessionDep,
+def optimize(mission_id: MissionId, user: Planner, c: ContainerDep, s: SessionDep,
              body: OptimizeIn | None = None) -> dict[str, Any]:
     if not c.optimize_limiter.allow(str(user.user_id)):
         raise ServiceError(429, "RATE_LIMITED", "Too many optimization requests")
@@ -388,7 +404,7 @@ def optimize(mission_id: int, user: Planner, c: ContainerDep, s: SessionDep,
 
 
 @router.get("/missions/{mission_id}/runs", response_model=list[RunSummaryOut], tags=["optimization"])
-def mission_runs(mission_id: int, _: Viewer, s: SessionDep) -> list[dict[str, Any]]:
+def mission_runs(mission_id: MissionId, _: Viewer, s: SessionDep) -> list[dict[str, Any]]:
     missions.get_mission_or_404(s, mission_id)
     return admin.run_summaries(s, mission_id)
 
@@ -399,13 +415,14 @@ def get_run(run_id: str, _: Viewer, s: SessionDep) -> dict[str, Any]:
 
 
 @router.post("/missions/{mission_id}/assign", response_model=list[AssignmentOut], tags=["optimization"])
-def assign(mission_id: int, body: AssignIn, user: Planner, c: ContainerDep, s: SessionDep) -> list[dict[str, Any]]:
+def assign(mission_id: MissionId, body: AssignIn, user: Planner, c: ContainerDep, s: SessionDep
+           ) -> list[dict[str, Any]]:
     m = missions.get_mission_or_404(s, mission_id)
     return optimization.assign(c, s, m, body.run_id, body.set_index, user.user_id)
 
 
 @router.post("/missions/{mission_id}/unassign", response_model=MissionOut, tags=["optimization"])
-def unassign(mission_id: int, request: Request, user: Planner, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
+def unassign(mission_id: MissionId, request: Request, user: Planner, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
     m = missions.get_mission_or_404(s, mission_id)
     admin.unassign(s, m, c.clock.now())
     _audit(request, s, c, user.user_id, "ASSIGN_CANCEL", "mission", str(mission_id))
@@ -440,6 +457,32 @@ def horizon_plan(body: HorizonIn, user: Planner, c: ContainerDep, s: SessionDep)
 def horizon_apply(body: HorizonApplyIn, user: Planner, c: ContainerDep, s: SessionDep) -> dict[str, Any]:
     return horizon.apply(c, s, user_id=user.user_id,
                          assignments=[(a.mission_id, a.aircraft_ids) for a in body.assignments])
+
+
+# ── maintenance board & recommendations (FR-90…FR-92) ─────────────────
+@router.get("/maintenance/board", response_model=MaintenanceBoardOut, tags=["maintenance"])
+def maintenance_board(_: Viewer, c: ContainerDep, s: SessionDep, base_code: str | None = None,
+                      squadron_code: str | None = None, type_code: str | None = None) -> dict[str, Any]:
+    return maintenance.board(c, s, base_code=base_code, squadron_code=squadron_code, type_code=type_code)
+
+
+@router.put("/maintenance/tasks", response_model=MaintenanceItemOut, tags=["maintenance"])
+def update_maintenance_task(body: MaintenanceTaskIn, request: Request, user: Maintainer, c: ContainerDep,
+                            s: SessionDep) -> dict[str, Any]:
+    item, before = maintenance.update_task(c, s, item_key=body.item_key, status=body.status,
+                                           planned_start=body.planned_start, planned_end=body.planned_end,
+                                           assignee=body.assignee, notes=body.notes, user_id=user.user_id)
+    _audit(request, s, c, user.user_id, "MAINT_TASK_UPDATE", "maintenance_task", body.item_key[:50], {
+        "item_key": body.item_key, "before": before,
+        "after": {k: item[k] for k in ("status", "planned_start", "planned_end", "assignee", "notes")}})
+    return item
+
+
+@router.get("/maintenance/recommendations", response_model=list[MissionMaintenanceOut], tags=["maintenance"])
+def maintenance_recommendations(_: Viewer, c: ContainerDep, s: SessionDep,
+                                mission_id: Annotated[int | None, Query(ge=1, le=MAX_ID)] = None,
+                                days: Annotated[int, Query(ge=1, le=60)] = 14) -> list[dict[str, Any]]:
+    return maintenance.mission_recommendations(s, load_context(c, s), mission_id=mission_id, days=days)
 
 
 # ── ML ─────────────────────────────────────────────────────────────────

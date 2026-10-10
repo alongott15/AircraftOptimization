@@ -202,6 +202,37 @@ Same engine with a "null mission" (D = 0, deadline = now): item status = `EXPIRE
 stale counter, or an adapter data issue); else `OK`.
 Aircraft overall status = worst item (`EXPIRED` > `UNKNOWN` > `EXPIRING_SOON` > `OK`).
 
+### 2.9 Maintenance tasks and recommendations (FR-90…FR-92, `backend/app/domain/maintenance.py`)
+Downstream of the compliance engine and never imported by it (import-linter contract). Pure functions:
+
+- **Requirements** — `aircraft_requirements(ac, status)` turns the §2.8 fleet status into tasks: not `OPERATIONAL` ⇒
+  `RETURN_TO_SERVICE`; open grounding MA ⇒ `CLOSE_MA`; unreadable rows (`data_issues`) and stale feeds ⇒ `FIX_DATA`;
+  every item not `OK`: `UNKNOWN` ⇒ `FIX_DATA` (only the data owner can fix it — S1), inspection ⇒ `PERFORM_INSPECTION`, permit ⇒ `RENEW_PERMIT`, deferral ⇒ `CLOSE_MA`, qualification ⇒
+  `RENEW_QUALIFICATION`, idle ⇒ `IDLE_CHECK`. `blocking` = the item is expired and blocks every mission (a
+  qualification only matters to missions that need it). Duplicates merge (worst status wins); most urgent first.
+- **Cycle and done** — a task's fingerprint identifies its occurrence: sorted `unit:due` of its items (inspection,
+  permit, qualification); the last flight for an idle check; `MA@opened_at` for an MA; `status@last_flight` for a
+  grounding and `kind:code@last_flight` for a data gap (a new one after the aircraft flew starts unplanned). A plan
+  row belongs to one `(item_key, fingerprint)`; the board attaches it only to that cycle. `task_done` reads only the
+  source data and fails safe: every limit of the planned cycle present, not `UNKNOWN`, and due strictly later; the MA
+  occurrence no longer open *and* not unreadable; operational (readable status) or flown since; data present.
+  Plans of earlier cycles that the source shows done appear as `VERIFIED` (14 days) with the task's current status;
+  anything else stays history. Residual: an MA re-opened with the same number and opening time re-attaches its old
+  plan — the card still shows the live (expired, blocking) status (PRD §12 item 9).
+- **Recommendations** — for a mission short of `shortfall = required − eligible` aircraft:
+  1. for each excluded aircraft, map *every* reason to a task (`tasks_for_reasons`); if any reason is not a maintenance
+     matter (engines, endurance, permit restriction, scope, assignment, `DATA_MISSING`, …) the aircraft is skipped;
+  2. simulate the tasks on a **copy** of the aircraft at `now` (`complete_tasks`, BR-18): inspection ⇒ every limit
+     restarts from the earlier of now / its old due point (calendar due = min(now, old due) + interval, counter due =
+     min(current, old due) + interval — safe under the tolerance rule); permit ⇒ the previous active permit's validity
+     length, with the union of every restriction of that type (usage-limited, missing or undated permits are not
+     simulated); MA ⇒ removed from the open list; qualification ⇒ its previous validity length; idle check ⇒ a check
+     flight at now using `CHECK_FLIGHT_USE` (1 FH, 1 LDG, 1 CYC, one start per engine). `FIX_DATA` and any overflow
+     from absurd source values are never simulated;
+  3. re-run the **unchanged** `evaluate_eligibility` on the copy; keep the aircraft only if it is now eligible (BR-17).
+  Every verified candidate is returned (the planner chooses), sorted by number of tasks, then tail — to be done by
+  the mission start; nothing is computed for a mission that is not short. Recommendations change nothing: the real aircraft stays excluded until the source data changes.
+
 ---
 
 ## 3. Stage 2 — Scoring (eligible aircraft only)

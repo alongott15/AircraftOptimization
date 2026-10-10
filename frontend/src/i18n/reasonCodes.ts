@@ -4,7 +4,7 @@
  */
 import type { Reference } from '../api/types';
 import { formatDateTime, formatHours, formatNumber } from './format';
-import { tk } from './index';
+import { t, tk } from './index';
 
 export type ReasonParams = Record<string, string | number | null | undefined>;
 
@@ -68,6 +68,57 @@ export function makeNames(ref?: Reference): Names {
   return names;
 }
 
+/** What is missing, for DATA_MISSING reasons and FIX_DATA maintenance tasks. */
+export function missingItemName(kind: unknown, code: unknown, nm: Names): string {
+  switch (s(kind)) {
+    case 'COUNTER':
+      return `מונה ${nm.unit(code)}`;
+    case 'PERMIT':
+      return nm.permit(code);
+    case 'INSPECTION':
+      return nm.inspection(code);
+    case 'LAST_FLIGHT':
+      return 'מועד טיסה אחרונה';
+    case 'DEFERRAL':
+      return `דחיית תקלה ${ltr(s(code))}`;
+    case 'INSPECTION_LIMIT':
+      return `הגדרת מגבלות ${nm.inspection(code)}`;
+    case 'AIRCRAFT_TYPE':
+      return `נתוני דגם ${ltr(s(code))}`;
+    case 'AIRCRAFT_STATUS':
+      return 'סטטוס מבצעי';
+    case 'MAINTENANCE_ACTION':
+      return `פעולת תחזוקה ${ltr(s(code))}`;
+    default:
+      return s(code);
+  }
+}
+
+/** Title of a maintenance task (FR-90) from its action code and reference — e.g. "ביצוע בדיקה שנתית". */
+export function taskTitle(action: string, ref: string, nm: Names): string {
+  const name = (() => {
+    switch (action) {
+      case 'PERFORM_INSPECTION':
+        return nm.inspection(ref);
+      case 'RENEW_PERMIT':
+        return nm.permit(ref);
+      case 'RENEW_QUALIFICATION':
+        return nm.qualification(ref);
+      case 'RETURN_TO_SERVICE':
+        return tk(`opStatus.${ref}`, undefined, ref);
+      case 'FIX_DATA': {
+        const [kind, ...code] = ref.split(':');
+        if (kind === 'STALE') return null; // own title: the whole feed is out of date
+        return missingItemName(kind, code.join(':'), nm);
+      }
+      default:
+        return ltr(ref);
+    }
+  })();
+  if (name === null) return t('maintenance.action.FIX_STALE');
+  return tk(`maintenance.action.${action}`, { name }, action);
+}
+
 type Template = (p: ReasonParams, names: Names) => string;
 
 export const REASON_TEMPLATES: Record<string, Template> = {
@@ -113,30 +164,7 @@ export const REASON_TEMPLATES: Record<string, Template> = {
     `הגבלה ב${nm.permit(p.permit_type_code)} (${tk(`restriction.${s(p.restriction)}`, undefined, s(p.restriction))}) אינה מתאימה למשימת ${tk(`missionType.${s(p.mission_type)}`)}`,
   IDLE_LIMIT_EXCEEDED: (p) =>
     `המטוס לא טס ${n(p.idle_days, 0)} ימים (מגבלה: ${n(p.limit_days, 0)}) — נדרשת בדיקה לאחר השבתה`,
-  DATA_MISSING: (p, nm) => {
-    const kind = s(p.item_kind);
-    const item =
-      kind === 'COUNTER'
-        ? `מונה ${nm.unit(p.item_code)}`
-        : kind === 'PERMIT'
-          ? nm.permit(p.item_code)
-          : kind === 'INSPECTION'
-            ? nm.inspection(p.item_code)
-            : kind === 'LAST_FLIGHT'
-              ? 'מועד טיסה אחרונה'
-              : kind === 'DEFERRAL'
-                ? `דחיית תקלה ${ltr(s(p.item_code))}`
-                : kind === 'INSPECTION_LIMIT'
-                  ? `הגדרת מגבלות ${nm.inspection(p.item_code)}`
-                  : kind === 'AIRCRAFT_TYPE'
-                    ? `נתוני דגם ${ltr(s(p.item_code))}`
-                    : kind === 'AIRCRAFT_STATUS'
-                      ? 'סטטוס מבצעי'
-                      : kind === 'MAINTENANCE_ACTION'
-                        ? `פעולת תחזוקה ${ltr(s(p.item_code))}`
-                        : s(p.item_code);
-    return `נתונים חסרים (${item}) — לא ניתן לאשר כשירות`;
-  },
+  DATA_MISSING: (p, nm) => `נתונים חסרים (${missingItemName(p.item_kind, p.item_code, nm)}) — לא ניתן לאשר כשירות`,
   DATA_STALE: (p, nm) => {
     const source = tk(`feed.${s(p.source_name)}`, undefined, s(p.source_name));
     const what = p.unit ? `${source} (${nm.unit(p.unit)})` : source;

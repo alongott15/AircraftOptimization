@@ -15,6 +15,12 @@ export function Ltr({ children }: { children: ReactNode }) {
   return <bdi dir="ltr">{children}</bdi>;
 }
 
+/** Text with LTR isolates (U+2066…U+2069 from reasonCodes.ltr) rendered as <bdi> so codes never break across lines. */
+export function BidiText({ text }: { text: string }) {
+  const parts = text.split(/\u2066([^\u2069]*)\u2069/);
+  return <>{parts.map((part, i) => (i % 2 === 1 ? <bdi key={i} dir="ltr">{part}</bdi> : part))}</>;
+}
+
 export function LoadingState() {
   return (
     <Center py="xl" aria-busy="true">

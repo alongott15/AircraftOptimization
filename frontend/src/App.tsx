@@ -24,6 +24,7 @@ import {
   IconRoute,
   IconSettings,
   IconSun,
+  IconTool,
   IconUser,
 } from '@tabler/icons-react';
 import { lazy, Suspense } from 'react';
@@ -47,6 +48,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AuditPage = lazy(() => import('./pages/AuditPage'));
 const PlanningPage = lazy(() => import('./pages/PlanningPage'));
 const FleetApronPage = lazy(() => import('./pages/FleetApronPage'));
+const MaintenancePage = lazy(() => import('./pages/MaintenancePage'));
 
 const NAV: { to: string; label: MessageKey; icon: typeof IconPlane; perm: Permission }[] = [
   { to: '/', label: 'nav.dashboard', icon: IconLayoutDashboard, perm: 'VIEW' },
@@ -54,6 +56,7 @@ const NAV: { to: string; label: MessageKey; icon: typeof IconPlane; perm: Permis
   { to: '/missions/new', label: 'nav.missionNew', icon: IconRoute, perm: 'PLAN' },
   { to: '/planning', label: 'nav.planning', icon: IconCalendarStats, perm: 'PLAN' },
   { to: '/missions', label: 'nav.missions', icon: IconListDetails, perm: 'VIEW' },
+  { to: '/maintenance', label: 'nav.maintenance', icon: IconTool, perm: 'VIEW' },
   { to: '/settings', label: 'nav.settings', icon: IconSettings, perm: 'VIEW' },
   { to: '/audit', label: 'nav.audit', icon: IconHistory, perm: 'AUDIT' },
 ];
@@ -150,6 +153,7 @@ function Shell() {
               <Route path="/missions/:id" element={<MissionPage />} />
               <Route path="/missions/:id/edit" element={can('PLAN') ? <MissionFormPage /> : <Navigate to="/" />} />
               <Route path="/planning" element={can('PLAN') ? <PlanningPage /> : <Navigate to="/" />} />
+              <Route path="/maintenance" element={<MaintenancePage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/audit" element={can('AUDIT') ? <AuditPage /> : <Navigate to="/" />} />
               <Route path="*" element={<Navigate to="/" />} />

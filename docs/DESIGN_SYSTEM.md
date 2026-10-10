@@ -153,6 +153,31 @@ Two-column: `MissionForm` (right) · results area (left) that shows `Recommendat
 ### 4.5 משימות `/missions` · הגדרות `/settings` · יומן פעולות `/audit` · התחברות `/login`
 Standard tables/forms using the same components.
 
+### 4.6 לוח תחזוקה `/maintenance` (FR-90…FR-92)
+```
+┌ לוח תחזוקה ─────────────────────────────── פעולות: 14 · נכון ל-15/01/2026 10:00 ┐
+│ ⓘ intro: drag or "העבר אל"; "בוצע" never changes eligibility                       │
+│ ┌ המלצות תחזוקה למשימות ───────────────────────────────────────────────────────┐ │
+│ │ [הובלת נוסעים · 16/01 10:00 · ⛔ חוסר: 2] כשירים 7 מתוך 9 · להשלמה עד …         │ │
+│ │   4X-P02 · ביצוע בדיקת 100 שעות  [נדרש] [תזמון]                                 │ │
+│ └──────────────────────────────────────────────────────────────────────────────┘ │
+│ [דגם ▾] [בסיס ▾] [טייסת ▾]  ◯ רק פעולות המונעות כשירות  ◯ רק פעולות הנדרשות למשימות │
+│ ┌נדרש (9)──┐┌מתוכנן──┐┌בביצוע──┐┌בוצע — ממתין לאימות┐┌אומת בנתוני התחזוקה┐          │
+│ │▌4X-S03 ⋮ ││        ││        ││                    ││                   │          │
+│ │ ביצוע בדיקה שנתית │ …                                                               │
+│ │ ⛔ פג תוקף ⛔ מונע כשירות · יעד: 14/01/2026 10:00 · נדרש למשימה: [הובלת נוסעים] [תזמון] │
+└───────────────────────────────────────────────────────────────────────────────────┘
+```
+- Five lanes, first lane at the right (RTL); lanes stretch to the tallest so a card can be dropped at any height;
+  the board scrolls sideways below ~1300 px. Card start border = status color (expired red, expiring amber, verified
+  green); status is always badge + icon + text, plus "מונע כשירות" when the task blocks every mission.
+- Moving: HTML5 drag & drop (custom MIME type — only cards drop on lanes; "אומת" accepts nothing) **and** the "⋮"
+  menu "העבר אל" for keyboard/screen-reader users. Moving to מתוכנן/בביצוע without a start time opens the schedule
+  dialog (status, `datetime-local` start/end in Israel time, team, notes). Read-only roles see no menu, no drag, a note.
+- Badges use the status tokens (`toneVars`) — Mantine's default light/outline colors fail AA on these surfaces.
+- Mission results: when a mission is short of aircraft, the shortfall alert lists the recommended maintenance per
+  aircraft and links to the board filtered by that mission (`/maintenance?mission=<id>`).
+
 ## 5. Interaction rules
 1. Expired always wins: sorting defaults put `EXPIRED` first; banner persists; 3D pulses.
 2. Every number with a unit shows the unit (`ש״ט`, `נח׳`, `ימים`).

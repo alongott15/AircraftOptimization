@@ -12,6 +12,7 @@
   --ao-info-bg: #d1e9ff;
   --ao-bg: #f5f7fa;
   --ao-surface: #ffffff;
+  --ao-lane: #e9edf3;
 }
 
 [data-mantine-color-scheme='dark'] {
@@ -27,6 +28,7 @@
   --ao-info-bg: #0f2747;
   --ao-bg: #0b1220;
   --ao-surface: #121a2b;
+  --ao-lane: #0f1726;
 }
 
 /* WCAG AA: Mantine's default dimmed grey (#868e96) is only 3.3:1 on white. */
@@ -167,5 +169,54 @@ bdi[dir='ltr'] {
 @media (prefers-reduced-motion: reduce) {
   .ao-pulse {
     animation: none;
+  }
+}
+
+/* Maintenance board (FR-90): five lanes, right-to-left in RTL; scrolls sideways on narrow screens. Lanes stretch to
+   the tallest one so a card can be dropped at any height. */
+.ao-kanban {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(240px, 1fr));
+  gap: var(--mantine-spacing-sm);
+  overflow-x: auto;
+  padding-block-end: var(--mantine-spacing-xs);
+}
+.ao-kanban-col {
+  background: var(--ao-lane);
+  border: 2px dashed transparent;
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-xs);
+  min-block-size: 220px;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.ao-kanban-col[data-over='true'] {
+  border-color: var(--ao-info-fg);
+  background: var(--ao-info-bg);
+}
+.ao-kanban-card {
+  background: var(--ao-surface);
+  border-inline-start: 4px solid var(--ao-unknown-fg);
+}
+.ao-kanban-card[draggable='true'] {
+  cursor: grab;
+}
+.ao-kanban-card[draggable='true']:active {
+  cursor: grabbing;
+}
+.ao-kanban-card[data-dragging='true'] {
+  opacity: 0.5;
+}
+.ao-kanban-card[data-tone='EXPIRED'] {
+  border-inline-start-color: var(--ao-expired-fg);
+}
+.ao-kanban-card[data-tone='EXPIRING_SOON'] {
+  border-inline-start-color: var(--ao-expiring-fg);
+}
+.ao-kanban-card[data-tone='OK'] {
+  border-inline-start-color: var(--ao-ok-fg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ao-kanban-col {
+    transition: none;
   }
 }

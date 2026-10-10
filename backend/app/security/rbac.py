@@ -12,6 +12,7 @@ class Permission(StrEnum):
     WHAT_IF = "WHAT_IF"  # stateless eligibility check
     AUDIT = "AUDIT"  # view audit log
     ADMIN = "ADMIN"  # policy, weights, hangar capacity, retrain models
+    MAINTAIN = "MAINTAIN"  # schedule maintenance tasks on the maintenance board (FR-91)
 
 
 ROLES = ("VIEWER", "PLANNER", "MAINTENANCE_CONTROLLER", "ADMIN")
@@ -19,7 +20,8 @@ ROLES = ("VIEWER", "PLANNER", "MAINTENANCE_CONTROLLER", "ADMIN")
 ROLE_PERMISSIONS: Mapping[str, frozenset[Permission]] = {
     "VIEWER": frozenset({Permission.VIEW}),
     "PLANNER": frozenset({Permission.VIEW, Permission.PLAN, Permission.WHAT_IF}),
-    "MAINTENANCE_CONTROLLER": frozenset({Permission.VIEW, Permission.WHAT_IF, Permission.AUDIT}),
+    "MAINTENANCE_CONTROLLER": frozenset({Permission.VIEW, Permission.WHAT_IF, Permission.AUDIT,
+                                         Permission.MAINTAIN}),
     "ADMIN": frozenset(Permission),
 }
 

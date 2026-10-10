@@ -186,6 +186,10 @@ reviewed by `compliance-safety-reviewer` before updating the snapshot.
 8. **Accessibility:** `@axe-core/playwright` — zero serious/critical violations on dashboard, fleet, aircraft, mission planner.
 9. Viewer role cannot see "חשב המלצה" and gets 403 on direct API call.
 10. Visual regression (`toHaveScreenshot`, threshold 0.2 %) for dashboard and aircraft page in light/dark; 3D with fixed camera preset.
+11. Maintenance board (FR-90…92): a 9-aircraft transport mission → the shortfall alert names `4X-P02`'s inspection;
+    as `maint` the board shows the mission's recommendations; `4X-S03` scheduled via the "העבר אל" menu (start time
+    required); `4X-J04`'s MA dragged to "בוצע" stays "פג תוקף" and nothing reaches "אומת"; zero Latin text outside
+    `<bdi>`, zero serious axe violations. A viewer sees the board read-only (no menu, not draggable).
 
 ## 5.3 Test inventory (implemented)
 Backend (`backend/tests/`): `test_compliance_unit`, `test_property` (P1–P4, P6–P9), `test_optimization`, `test_golden`,
@@ -200,7 +204,23 @@ scores without bands, eligibility invariance with bands (P3 property, optimize, 
 fleet band/unit filters (overdue and unknown never hidden), E2E form → warning → fleet popover filter. `test_api` keeps a route-coverage check: every authenticated route must
 appear in the authz matrix. Compliance regression tests cover the 2026-10-09 safety review (commitments since snapshot,
 per-flight buffers, later assignments, NaN, programme gaps, undated permits, missing feeds, stale counters).
-Frontend: Vitest (`i18n`, `components`, `zones`), Playwright `e2e/demo.spec.ts` (8 flows incl. edit, horizon, apron).
+FR-90…92 (`test_maintenance`): requirements per golden aircraft (14 fleet-wide; blocking vs. not; FIX_DATA for P04;
+unreadable rows and stale feeds), fail-safe "done" (a due that disappears or moves earlier, an unreadable MA or status
+is never done; re-opened MA / new grounding = new cycle), conservative what-if (overflown inspection restarts from its
+due point, renewals repeat the previous validity and keep every restriction, usage-limited / absent permits not
+simulated, idle check = check flight, absurd values not simulated), API: next cycle planned afresh with the old plan
+VERIFIED, a new grounding never inherits an old DONE, data gaps never VERIFIED, bounded input (dates, control/bidi
+characters, key pattern, 32-bit ids),
+recommendations verified by the unchanged engine on copies (M-B × 9: P02, J03, J04 …; never P04 — missing data — or
+P09 — permit restriction; real aircraft still excluded), OVERWATER renewal for J02 (M-C × 3), FIX_DATA never
+simulated, non-maintenance reasons reject the aircraft, `task_done` only from source data, API: board, viewer 403,
+validation (`FIELD_REQUIRED`, end before start), DONE leaves `4X-S03` EXPIRED, unknown key 404, audit, mission
+recommendations + board `unblocks`.
+Extended demo profile (`test_extended_seed`): golden aircraft statuses identical, EX-01…EX-20 exactly as
+designed, the pre-filled schedule attached to the current cycles (5/4/3 + 3 verified), recommendations for the short
+missions only, the at-risk assignment alert, PRD §11 step 5 still true on the demo data.
+Frontend: Vitest (`i18n` incl. task titles, `components`, `zones`), Playwright `e2e/demo.spec.ts` (15 flows incl. edit,
+horizon, apron, maintenance board).
 
 ## 6. CI pipeline (order)
 `.github/workflows/ci.yml`: `ruff` → `mypy` → `import-linter` → `eslint`/`tsc` → backend unit + property → golden → API → frontend unit →

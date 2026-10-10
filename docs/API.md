@@ -256,12 +256,43 @@ qualification mismatch — last).
 | PUT | `/settings/hangar-capacity` | ADMIN | `[{base_code, iso_week, slots}]` |
 | GET | `/audit?from=&to=&user_id=&action=` | ADMIN, MAINTENANCE_CONTROLLER | paginated |
 
+### 3.8 Maintenance planning (FR-90…FR-92)
+| Method | Path | Role | Notes |
+|--------|------|------|-------|
+| GET | `/maintenance/board?base_code=&squadron_code=&type_code=` | VIEWER | `{as_of, items[]}` — open tasks merged with their schedule, plus tasks verified in the last 14 days |
+| PUT | `/maintenance/tasks` | MAINTENANCE_CONTROLLER, ADMIN (`MAINTAIN`) | `{item_key, status, planned_start?, planned_end?, assignee?, notes?}` → the board item; audit `MAINT_TASK_UPDATE` with before/after |
+| GET | `/maintenance/recommendations?mission_id=&days=14` | VIEWER | one mission, or every open (DRAFT/OPTIMIZED) mission starting within `days` (1–60) |
+
+Board item: `card_id`, `item_key` (`"<aircraft_id>:<action>:<ref>"`), aircraft fields (`aircraft_id, tail_number, type_code,
+base_code, squadron_code`), `action`, `ref`, `compliance_status`, `blocking`, `due_at`, `remaining` + `unit` (days for
+`CAL_DAY` / `IDLE_DAY`), `zone_code`, `status`, `planned_start`, `planned_end`, `assignee`, `notes`, `updated_at`,
+`unblocks: [{mission_id, name, start_at}]` (missions short of aircraft that this task is recommended for).
+
+- `action`: `PERFORM_INSPECTION` (ref = inspection type), `RENEW_PERMIT` (permit type), `CLOSE_MA` (MA number —
+  grounding or deferred), `RENEW_QUALIFICATION` (qualification), `IDLE_CHECK`, `RETURN_TO_SERVICE` (operational
+  status), `FIX_DATA` (`"<missing kind>:<code>"`, e.g. `COUNTER:LDG`, `AIRCRAFT_STATUS:<raw>` for an unreadable
+  row, `STALE:DATA` when a feed is out of date).
+- `status`: `REQUIRED`, `SCHEDULED`, `IN_PROGRESS`, `DONE` (set by people — planning only, never changes eligibility)
+  and `VERIFIED` (read-only: the maintenance source data shows the work done — BR-16).
+- PUT validation: `SCHEDULED`/`IN_PROGRESS` without `planned_start` ⇒ 422 `FIELD_REQUIRED`; end before start, a
+  date outside now − 1 y … now + 2 y, or control / bidi-formatting characters in `assignee`/`notes` ⇒ 422
+  `INVALID_VALUE`; `item_key` must match `<id>:<ACTION>:<ref>`; a key that is not an open task (unknown, or already
+  done in the source) ⇒ 404 `NOT_FOUND`. The schedule is saved for the task's **current cycle** (one plan per cycle).
+- `card_id` is unique per card: the `item_key` for open tasks, `item_key#<plan>` for a verified earlier cycle (whose
+  `compliance_status`/`due_at` are the task's current values). Recommendations consider at most 50 missions.
+- Every `mission_id` (path or query) is bounded to 1 … 2 147 483 647 (larger ⇒ 422, never a database error).
+
+Recommendation (per mission): `{mission_id, name, start_at, required, eligible_count, shortfall, complete_by,
+candidates: [{aircraft_id, tail_number, type_code, base_code, tasks: [{item_key, action, ref}]}]}` — candidates
+fewest tasks first; each one re-verified by the unchanged compliance engine (BR-17, OPT §2.9).
+
 ## 4. Status enums
 - `compliance_status` / item `status`: `EXPIRED`, `EXPIRING_SOON`, `OK`, `UNKNOWN`
 - `operational_status`: `OPERATIONAL`, `IN_MAINTENANCE`, `GROUNDED`, `STORED`; `derived_status` adds MA-grounding
 - `mission.status`: `DRAFT`, `OPTIMIZED`, `ASSIGNED`, `CANCELLED`, `COMPLETED`
 - `solver_status`: `OPTIMAL`, `FEASIBLE`, `INFEASIBLE`, `SKIPPED` (no eligible aircraft)
 - risk `band`: `LOW`, `MEDIUM`, `HIGH`, `UNAVAILABLE`
+- maintenance task `status`: `REQUIRED`, `SCHEDULED`, `IN_PROGRESS`, `DONE`, `VERIFIED` (§3.8)
 
 ## 5. Reason / warning / hint codes (single source of truth)
 

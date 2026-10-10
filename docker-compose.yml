@@ -4,7 +4,7 @@ services:
   init:
     build: ./backend
     command: >
-      sh -c "python -m app.seed.generator --anchor now --seed 42 --out /app/data/poc.sqlite &&
+      sh -c "python -m app.seed.generator --anchor now --seed 42 --profile extended --out /app/data/poc.sqlite &&
              python -m app.ml.train --all"
     env_file: .env
     environment:

@@ -35,6 +35,13 @@ export type Weights = S['WeightsOut'];
 export type TgWeight = S['TgWeightOut'];
 export type TgWeightInput = S['TgWeightIn'];
 export type ComplianceStatus = AircraftSummary['compliance_status'];
+export type MaintenanceBoard = S['MaintenanceBoardOut'];
+export type MaintenanceItem = S['MaintenanceItemOut'];
+export type MaintenanceTaskInput = S['MaintenanceTaskIn'];
+export type TaskStatus = MaintenanceItem['status'];
+export type TaskAction = MaintenanceItem['action'];
+export type MissionMaintenance = S['MissionMaintenanceOut'];
+export type RecommendedAircraft = S['RecommendedAircraftOut'];
 
 export interface Policy {
   duration_buffer_pct: number;

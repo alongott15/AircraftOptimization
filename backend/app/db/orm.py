@@ -21,6 +21,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     event,
 )
 from sqlalchemy.engine import Dialect
@@ -344,6 +345,31 @@ class MissionScopeRow(AppBase):
     mission_id: Mapped[int] = mapped_column(ForeignKey("mission.mission_id", ondelete="CASCADE"), primary_key=True)
     kind: Mapped[str] = mapped_column(String(16), primary_key=True)  # SQUADRON | AIRCRAFT_TYPE
     code: Mapped[str] = mapped_column(String(16), primary_key=True)
+
+
+class MaintenancePlanRow(AppBase):
+    """Manual schedule of one cycle of a maintenance task (FR-91). Planning only — never read by the compliance
+    engine; a task is done when the source data says so. One row per (task, cycle): a new due cycle starts a new
+    row, so an earlier plan never carries over and stays as history. Alembic 0005."""
+
+    __tablename__ = "maintenance_plan"
+    __table_args__ = (CheckConstraint("status IN ('REQUIRED', 'SCHEDULED', 'IN_PROGRESS', 'DONE')",
+                                      name="ck_maintenance_plan_status"),
+                      UniqueConstraint("item_key", "fingerprint", name="uq_maintenance_plan_cycle"))
+    plan_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_key: Mapped[str] = mapped_column(String(120), index=True)  # "<aircraft_id>:<action>:<ref>"
+    aircraft_id: Mapped[int] = mapped_column(Integer)
+    tail_number: Mapped[str] = mapped_column(String(16))
+    action: Mapped[str] = mapped_column(String(24))
+    ref: Mapped[str] = mapped_column(String(80))
+    fingerprint: Mapped[str] = mapped_column(String(200))  # due cycle the plan was made for
+    status: Mapped[str] = mapped_column(String(16))
+    planned_start: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    planned_end: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    assignee: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.user_id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
 class MissionQualificationRow(AppBase):

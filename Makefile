@@ -28,7 +28,7 @@ password:
 
 ## Generate data/poc.sqlite anchored to "now" (demo scenarios are relative to the anchor)
 seed:
-	$(BACKEND) uv run python -m app.seed.generator --anchor now --seed 42
+	$(BACKEND) uv run python -m app.seed.generator --anchor now --seed 42 --profile extended
 
 train:
 	$(BACKEND) uv run python -m app.ml.train --all

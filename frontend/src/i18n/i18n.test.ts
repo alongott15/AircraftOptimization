@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { statusPalette } from '../theme/tokens';
 import { formatDateTime, formatHours, localInputToUtc, parseDuration } from './format';
 import { hasKey, interpolate, t, tk } from './index';
-import { makeNames, REASON_TEMPLATES, renderReason } from './reasonCodes';
+import { makeNames, REASON_TEMPLATES, renderReason, taskTitle } from './reasonCodes';
 
 const ref = {
   inspection_types: [{ inspection_type_code: 'LG_INSP', name_he: 'בדיקת כני נסע', zone_code: 'GEAR_MAIN', limits: [] }],
@@ -72,6 +72,33 @@ describe('i18n', () => {
     expect(later).toBe('שיבוץ זה יגרום לחריגה בבדיקת כני נסע (2 נח׳) עד סיום המשימה המשובצת "ניווט"');
     expect(renderReason({ code: 'NON_GROUNDING_PERMIT_INVALID', params: { permit_type_code: 'INSURANCE', outcome: 'EXPIRED' } },
       names)).toBe('תוקף פוליסת ביטוח פג (היתר שאינו מקרקע — לבדיקת גורם מוסמך)');
+  });
+});
+
+describe('maintenance tasks (FR-90)', () => {
+  const nm = makeNames(ref);
+  const strip = (s: string) => s.replace(/[\u2066-\u2069]/g, '');
+
+  it('names every task action in Hebrew from reference data', () => {
+    expect(taskTitle('PERFORM_INSPECTION', 'LG_INSP', nm)).toBe('ביצוע בדיקת כני נסע');
+    expect(taskTitle('RENEW_PERMIT', 'INSURANCE', nm)).toBe('חידוש פוליסת ביטוח');
+    expect(taskTitle('RENEW_QUALIFICATION', 'IFR', nm)).toBe('חידוש כשירות טיסת מכשירים');
+    expect(strip(taskTitle('CLOSE_MA', 'MA-2026-00412', nm))).toBe('סגירת פעולת תחזוקה MA-2026-00412');
+    expect(taskTitle('IDLE_CHECK', 'IDLE_CHECK', nm)).toBe('בדיקה לאחר השבתה');
+    expect(taskTitle('RETURN_TO_SERVICE', 'IN_MAINTENANCE', nm)).toBe('החזרה לשירות (כעת: בתחזוקה)');
+    expect(taskTitle('FIX_DATA', 'COUNTER:LDG', nm)).toBe('השלמת נתונים חסרים: מונה נח׳');
+    expect(taskTitle('FIX_DATA', 'INSPECTION:LG_INSP', nm)).toBe('השלמת נתונים חסרים: בדיקת כני נסע');
+    expect(taskTitle('FIX_DATA', 'STALE:DATA', nm)).toBe('רענון נתוני מקור שאינם עדכניים');
+  });
+
+  it('has a label for every board column and action code', () => {
+    for (const c of ['REQUIRED', 'SCHEDULED', 'IN_PROGRESS', 'DONE', 'VERIFIED']) {
+      expect(hasKey(`maintenance.column.${c}`) && hasKey(`maintenance.columnHint.${c}`)).toBe(true);
+    }
+    for (const a of ['PERFORM_INSPECTION', 'RENEW_PERMIT', 'CLOSE_MA', 'RENEW_QUALIFICATION', 'IDLE_CHECK',
+      'RETURN_TO_SERVICE', 'FIX_DATA']) {
+      expect(hasKey(`maintenance.action.${a}`)).toBe(true);
+    }
   });
 });
 

@@ -71,6 +71,8 @@ def evaluate_usage_limit(
 - `app.domain` must not import `app.api`, `app.services`, `app.repositories`, `app.db`, `app.datasources`, `app.ml`,
   `fastapi`, `sqlalchemy`.
 - `app.domain.compliance` must not import `app.domain.optimization` (eligibility is upstream of scoring).
+- `app.domain.compliance` must not import `app.domain.maintenance` (maintenance planning is downstream of eligibility
+  and can never change it — OPT §2.9).
 - `app.api` must not import `app.repositories` or `app.db` directly.
 
 ## 3. TypeScript / React (frontend)

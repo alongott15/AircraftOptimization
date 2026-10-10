@@ -264,3 +264,76 @@ test('mission scope: choose squadrons and aircraft types (FR-35)', async ({ page
   await expect(p01).toContainText('אינו בין הדגמים שנבחרו למשימה');
   expect(await latinOutsideBdi(page)).toEqual([]);
 });
+
+test('maintenance board: recommendations for a short mission, manual scheduling, DONE never makes eligible (FR-90…92)', async ({ page }) => {
+  await login(page, 'planner');
+  const missionId = await page.evaluate(async () => {
+    const csrf = /(?:^|;\s*)ao_csrf=([^;]+)/.exec(document.cookie)?.[1] ?? '';
+    const r = await fetch('/api/v1/missions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({ name: 'הובלה גדולה', mission_type: 'TRANSPORT', required_aircraft_count: 9,
+        start_at: '2026-01-20T08:00:00Z', est_duration_hours: 4, est_landings: 2, departure_base_code: 'CEN',
+        required_qualifications: ['PAX', 'IFR'], engine_requirement: 'MIN_2' }),
+    });
+    return ((await r.json()) as { mission_id: number }).mission_id;
+  });
+  // mission page: the shortfall alert names the maintenance that would close the gap
+  await page.goto(`/missions/${missionId}`);
+  await page.getByRole('button', { name: 'חשב המלצה' }).click();
+  const hint = page.getByTestId('mission-maint-hint');
+  await expect(hint).toContainText('4X-P02');
+  await expect(hint).toContainText('ביצוע');
+  await page.context().clearCookies();
+
+  await login(page, 'maint');
+  await page.getByRole('link', { name: 'לוח תחזוקה' }).click();
+  await expect(page.getByRole('heading', { name: 'לוח תחזוקה' })).toBeVisible();
+  await expect(page.getByTestId('rec-mission').filter({ hasText: 'הובלה גדולה' })).toBeVisible();
+  await expect(page.getByTestId('col-VERIFIED').getByTestId('task-card')).toHaveCount(0);
+
+  // schedule an expired inspection through the keyboard-accessible menu
+  const s03 = page.getByTestId('task-card').filter({ hasText: '4X-S03' });
+  await expect(page.getByTestId('col-REQUIRED').getByTestId('task-card').filter({ hasText: '4X-S03' })).toBeVisible();
+  await s03.getByTestId('task-move').click();
+  await page.getByTestId('move-SCHEDULED').click();
+  await page.getByTestId('schedule-save').click();
+  await expect(page.getByRole('dialog')).toContainText('שדה חובה'); // a schedule needs a start time
+  await page.getByTestId('schedule-start').fill('2026-01-16T06:00');
+  await page.getByTestId('schedule-assignee').fill('צוות א');
+  await page.getByTestId('schedule-save').click();
+  const scheduled = page.getByTestId('col-SCHEDULED').getByTestId('task-card').filter({ hasText: '4X-S03' });
+  await expect(scheduled).toContainText('16/01/2026 06:00');
+  await expect(scheduled).toContainText('צוות א');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  // drag a grounding MA to "done": the card waits for verification and the aircraft stays not eligible
+  const j04 = page.getByTestId('col-REQUIRED').getByTestId('task-card').filter({ hasText: '4X-J04' });
+  const lane = page.getByTestId('col-DONE');
+  await j04.scrollIntoViewIfNeeded();
+  const from = await j04.getByText('סגירת פעולת תחזוקה').boundingBox();
+  const to = await lane.boundingBox();
+  if (!from || !to) throw new Error('board not laid out');
+  const y = from.y + from.height / 2; // lanes span the full board height, so drop level with the card
+  await page.mouse.move(from.x + from.width / 2, y);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, y, { steps: 12 });
+  await page.mouse.up();
+  const done = page.getByTestId('col-DONE').getByTestId('task-card').filter({ hasText: '4X-J04' });
+  await expect(done).toBeVisible();
+  await expect(done).toContainText('פג תוקף');
+  await expect(page.getByTestId('col-VERIFIED').getByTestId('task-card')).toHaveCount(0);
+
+  expect(await latinOutsideBdi(page)).toEqual([]);
+  const axe = await new AxeBuilder({ page }).analyze();
+  const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(serious.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`))).toEqual([]);
+});
+
+test('maintenance board is read-only for viewers', async ({ page }) => {
+  await login(page, 'ops');
+  await page.goto('/maintenance');
+  await expect(page.getByTestId('maint-board')).toBeVisible();
+  await expect(page.getByText('צפייה בלבד')).toBeVisible();
+  await expect(page.getByTestId('task-move')).toHaveCount(0);
+  await expect(page.getByTestId('task-card').first()).not.toHaveAttribute('draggable', 'true');
+});
