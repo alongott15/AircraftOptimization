@@ -394,9 +394,16 @@ CREATE TABLE ml_model (
 | SE-100 | מטוס אימון חד-מנועי | 1 | 4.5 | 30 | SINGLE_PROP_LOW_WING |
 | TP-200 | מטוס טורבו-פרופ דו-מנועי | 2 | 6.0 | 45 | TWIN_TURBOPROP_HIGH_WING |
 | JT-300 | מטוס סילון דו-מנועי | 2 | 9.0 | 45 | TWIN_JET_LOW_WING |
+| F-16I | מטוס קרב סופה (F-16I) | 1 | 2.4 | 21 | FIGHTER_SINGLE |
+| F-15I | מטוס קרב רעם (F-15I) | 2 | 3.2 | 21 | FIGHTER_TWIN |
 
 ### 5.2 Bases
-`NTH` בסיס צפון · `CEN` בסיס מרכז · `STH` בסיס דרום. Hangar capacity: 2 slots/week/base for the next 8 weeks.
+`NTH` בסיס צפון · `CEN` בסיס מרכז · `STH` בסיס דרום · `EST` בסיס מזרח. Hangar capacity: 2 slots/week/base for the next
+8 weeks.
+
+Squadrons (FR-35): `SQ-11` אימון צפון (NTH, SE-100) · `SQ-12` אימון מרכז (CEN, SE-100) · `SQ-21` תובלה מרכז
+(CEN, TP-200) · `SQ-22` תובלה דרום (STH, TP-200) · `SQ-31` סילון (CEN, JT-300) · `SQ-41` קרב — סופה (EST, F-16I) ·
+`SQ-42` קרב — רעם (EST, F-15I).
 
 ### 5.3 Activity units
 | code | name_he | short_he | kind |
@@ -413,7 +420,7 @@ CREATE TABLE ml_model (
 `IFR` טיסת מכשירים · `NIGHT` טיסת לילה · `PAX` הסעת נוסעים · `CARGO` הובלת מטען · `OVERWATER` טיסה מעל מים ·
 `MEDEVAC` פינוי רפואי · `ICING` טיסה בתנאי קרח.
 Defaults per type — SE-100: IFR, NIGHT · TP-200: IFR, NIGHT, PAX, CARGO, OVERWATER, MEDEVAC, ICING ·
-JT-300: IFR, NIGHT, PAX, CARGO, OVERWATER, ICING.
+JT-300: IFR, NIGHT, PAX, CARGO, OVERWATER, ICING · F-16I / F-15I: IFR, NIGHT, OVERWATER.
 
 ### 5.5 Inspection types and limits
 | code | name_he | SE-100 | TP-200 | JT-300 | zone |
@@ -426,6 +433,16 @@ JT-300: IFR, NIGHT, PAX, CARGO, OVERWATER, ICING.
 | LG_INSP | בדיקת כני נסע | LDG 300 (tg 1.0) | LDG 600 (tg 1.0) | LDG 800 (tg 0.5) | GEAR_MAIN |
 | ENG_BORESCOPE | בדיקת בורוסקופ למנוע | — | FH 300 / ENG_START 600 | FH 300 / ENG_START 600 | ENGINE_1 |
 | IDLE_CHECK | בדיקה לאחר השבתה | IDLE_DAY 30 | IDLE_DAY 45 | IDLE_DAY 45 | — |
+
+Fighters (illustrative values for the demo — real limits come from the operator's maintenance programme):
+
+| code | name_he | F-16I | F-15I | zone |
+|------|---------|-------|-------|------|
+| PHASE | בדיקת פאזה | FH 300 (tol 15) | FH 400 (tol 20) | — |
+| ANNUAL | בדיקה שנתית | CAL 365 | CAL 365 | — |
+| LG_INSP | בדיקת כני נסע | LDG 500 (tg 1.0) | LDG 600 (tg 1.0) | GEAR_MAIN |
+| ENG_BORESCOPE | בדיקת בורוסקופ למנוע | FH 200 / ENG_START 400 | FH 200 / ENG_START 500 | ENGINE_1 |
+| IDLE_CHECK | בדיקה לאחר השבתה | IDLE_DAY 21 | IDLE_DAY 21 | — |
 
 ### 5.6 Permit types
 `COA` תעודת כושר טיסה · `REG` תעודת רישום · `RADIO` רישיון תחנת רדיו · `INSURANCE` פוליסת ביטוח ·
@@ -444,13 +461,15 @@ JT-300: IFR, NIGHT, PAX, CARGO, OVERWATER, ICING.
 - Steps: (1) reference data → (2) fleet of 24 aircraft → (3) simulate 18 months of flights and defects (§6.3) →
   (4) derive counters = initial TSN + Σ flight_log → (5) set healthy due state (§6.4) → (6) apply scenarios (§6.2) →
   (7) app-store: demo users, policy defaults, weight presets, hangar capacity, seeded mission `"אימון בוקר — משימה קיימת"` →
-  (8) `data_load_status` = T0 for all sources.
+  (8) `data_load_status` = T0 for all sources → (9) fighter squadrons (10 aircraft, SC-17), simulated last from their
+  own random stream (`seed ^ 0xF16`) so the 24 aircraft above and every golden value stay byte-identical.
 - Demo users: one per role (`planner`, `maint`, `ops`, `admin`); password from `APP_DEMO_PASSWORD` in `.env`
   (template in `.env.example`); never hard-coded in source.
 
 ### 6.2 Fleet & demo scenarios (golden data — TESTING.md §4 depends on this)
 
-Fleet: SE-100 `4X-S01`…`4X-S08` (base NTH/CEN), TP-200 `4X-P01`…`4X-P10` (CEN/STH), JT-300 `4X-J01`…`4X-J06` (CEN).
+Fleet (34): SE-100 `4X-S01`…`4X-S08` (base NTH/CEN), TP-200 `4X-P01`…`4X-P10` (CEN/STH), JT-300 `4X-J01`…`4X-J06`
+(CEN), F-16I `4X-F01`…`4X-F06` (EST, SQ-41), F-15I `4X-R01`…`4X-R04` (EST, SQ-42).
 Tail numbers contain a digit and are therefore fictional (real 4X registrations are letters only).
 
 | ID | Tail | Scenario | Exact seed values (T0 = anchor) | Dashboard status at T0 |
@@ -472,16 +491,18 @@ Tail numbers contain a digit and are therefore fictional (real 4X registrations 
 | SC-14 | 4X-J03 | In hangar | `status = IN_MAINTENANCE` | IN_MAINTENANCE |
 | SC-15 | 4X-S08 | Already assigned | assignment to `"אימון בוקר — משימה קיימת"` window T0 + 1 h → T0 + 4 h | OK |
 | SC-16 | 4X-P06 | Annual due in 3 days | `ANNUAL.due_at = T0 + 3 d` | EXPIRING_SOON |
+| SC-17 | 4X-F01…F06, 4X-R01…R04 | Fighter squadrons — healthy; short endurance (2.4 / 3.2 h) and no PAX keep them out of M-A/B/C; open MONITOR / MEL-C items on F02 (COCKPIT), F04 (WING_L), R02 (ENGINE_2), R03 (GEAR_MAIN) | §6.4 defaults + 4 open non-grounding MAs | OK |
 
 All other tails (`S01, S04, S06, P07, P10, J01, J05`) are healthy (§6.4).
 Expected dashboard KPIs at T0: aircraft with expired items = 4 (S03, P05, S07, J02); unknown = 1 (P04);
 open grounding MAs = 1 (J04); in maintenance = 1 (J03).
 
 ### 6.3 Synthetic history (for ML)
-- 18 months of flights. Daily fly probability: SE 0.55, TP 0.45, JT 0.35. Sorties/day 1–3.
-- Mission type mix: SE = TRAINING 90 %; TP = TRANSPORT 60 % / TRAINING 30 % / FERRY 10 %; JT = TRANSPORT 80 % / FERRY 20 %.
-- Duration ~ lognormal per type/mission (median SE 1.4 h, TP 2.2 h, JT 3.5 h); planned vs actual ratio ~ N(1.05, 0.08),
-  FERRY ~ N(1.12, 0.1) (signal for duration-buffer model).
+- 18 months of flights. Daily fly probability: SE 0.55, TP 0.45, JT 0.35, F-16I 0.5, F-15I 0.45. Sorties/day 1–3.
+- Mission type mix: SE = TRAINING 90 %; TP = TRANSPORT 60 % / TRAINING 30 % / FERRY 10 %; JT = TRANSPORT 80 % / FERRY 20 %;
+  F-16I = TRAINING 85 % / OTHER 15 %; F-15I = TRAINING 80 % / OTHER 20 %.
+- Duration ~ lognormal per type/mission (median SE 1.4 h, TP 2.2 h, JT 3.5 h, F-16I 1.3 h, F-15I 1.6 h); planned vs
+  actual ratio ~ N(1.05, 0.08), FERRY ~ N(1.12, 0.1) (signal for duration-buffer model).
 - Touch-and-goes: TRAINING ~ Poisson(5), else 0. Landings: 1 (+1 with p 0.15).
 - **Planted defect signal:** hazard per FH = `base × reliability(a) × (1 + FH_since_A_check / 400) × (1 + 0.3 × open_deferred) × (1 + 0.02 × tg_per_hour)`;
   `reliability ~ LogNormal(0, 0.4)` per aircraft (4X-S02 forced to the 95th percentile). 20 % of defects are GROUNDING
@@ -499,6 +520,7 @@ permits valid ≥ 60 days; `last_flight_at` within 1–6 days; qualifications wi
 | M-A | אימון לילה | 2 | T0 + 2 h | 2.5 | 1 | 6 | NIGHT | SINGLE | TRAINING | NTH |
 | M-B | הובלת נוסעים | 3 | T0 + 1 d | 4.0 | 2 | 0 | PAX, IFR | MIN_2 | TRANSPORT | CEN |
 | M-C | טיסת מעבר ארוכה | 1 | T0 + 3 h | 7.0 | 1 | 0 | OVERWATER | MIN_2 | FERRY | CEN |
+| M-F | גיחת אימון קרב | 4 | T0 + 2 h | 1.5 | 1 | 2 | NIGHT | ANY (scope SQ-41, SQ-42) | TRAINING | EST |
 
 ## 7. Vertica mapping (production)
 

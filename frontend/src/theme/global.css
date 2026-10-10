@@ -113,6 +113,12 @@ bdi[dir='ltr'] {
   animation: ao-pulse 1.6s ease-in-out infinite;
 }
 
+/* drei <Html> overlays: in an RTL page their absolutely-positioned content overflows leftwards by its own width, so
+   `center` misses the 3D point. Anchor them LTR; the content sets its own direction (.ao-info-card, <bdi>). */
+.ao-html {
+  direction: ltr;
+}
+
 .ao-hotspot {
   display: inline-flex;
   align-items: center;

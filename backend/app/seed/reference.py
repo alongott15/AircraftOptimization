@@ -7,9 +7,12 @@ AIRCRAFT_TYPES = [
     ("SE-100", "מטוס אימון חד-מנועי", 1, 4.5, 30, "SINGLE_PROP_LOW_WING"),
     ("TP-200", "מטוס טורבו-פרופ דו-מנועי", 2, 6.0, 45, "TWIN_TURBOPROP_HIGH_WING"),
     ("JT-300", "מטוס סילון דו-מנועי", 2, 9.0, 45, "TWIN_JET_LOW_WING"),
+    # fighters: short endurance (internal fuel + conformal tanks), shorter idle limit
+    ("F-16I", "מטוס קרב סופה (F-16I)", 1, 2.4, 21, "FIGHTER_SINGLE"),
+    ("F-15I", "מטוס קרב רעם (F-15I)", 2, 3.2, 21, "FIGHTER_TWIN"),
 ]
 
-BASES = [("NTH", "בסיס צפון"), ("CEN", "בסיס מרכז"), ("STH", "בסיס דרום")]
+BASES = [("NTH", "בסיס צפון"), ("CEN", "בסיס מרכז"), ("STH", "בסיס דרום"), ("EST", "בסיס מזרח")]
 
 # (squadron_code, name_he, base_code) — demo squadrons (טייסות)
 SQUADRONS = [
@@ -18,6 +21,8 @@ SQUADRONS = [
     ("SQ-21", "טייסת 21 — תובלה מרכז", "CEN"),
     ("SQ-22", "טייסת 22 — תובלה דרום", "STH"),
     ("SQ-31", "טייסת 31 — סילון", "CEN"),
+    ("SQ-41", "טייסת 41 — קרב (סופה)", "EST"),
+    ("SQ-42", "טייסת 42 — קרב (רעם)", "EST"),
 ]
 
 ACTIVITY_UNITS = [
@@ -44,6 +49,8 @@ TYPE_QUALIFICATIONS = {
     "SE-100": ["IFR", "NIGHT"],
     "TP-200": ["IFR", "NIGHT", "PAX", "CARGO", "OVERWATER", "MEDEVAC", "ICING"],
     "JT-300": ["IFR", "NIGHT", "PAX", "CARGO", "OVERWATER", "ICING"],
+    "F-16I": ["IFR", "NIGHT", "OVERWATER"],
+    "F-15I": ["IFR", "NIGHT", "OVERWATER"],
 }
 
 ZONES = [
@@ -68,6 +75,7 @@ INSPECTION_TYPES = [
     ("LG_INSP", "בדיקת כני נסע", "GEAR_MAIN"),
     ("ENG_BORESCOPE", "בדיקת בורוסקופ למנוע", "ENGINE_1"),
     ("IDLE_CHECK", "בדיקה לאחר השבתה", None),
+    ("PHASE", "בדיקת פאזה", None),
 ]
 
 # inspection, type, unit, interval, tolerance, tg_weight
@@ -96,10 +104,24 @@ INSPECTION_LIMITS = [
     ("IDLE_CHECK", "SE-100", "IDLE_DAY", 30, 0, 1.0),
     ("IDLE_CHECK", "TP-200", "IDLE_DAY", 45, 0, 1.0),
     ("IDLE_CHECK", "JT-300", "IDLE_DAY", 45, 0, 1.0),
+    # fighters
+    ("PHASE", "F-16I", "FH", 300, 15, 1.0),
+    ("ANNUAL", "F-16I", "CAL_DAY", 365, 0, 1.0),
+    ("LG_INSP", "F-16I", "LDG", 500, 0, 1.0),
+    ("ENG_BORESCOPE", "F-16I", "FH", 200, 0, 1.0),
+    ("ENG_BORESCOPE", "F-16I", "ENG_START", 400, 0, 1.0),
+    ("IDLE_CHECK", "F-16I", "IDLE_DAY", 21, 0, 1.0),
+    ("PHASE", "F-15I", "FH", 400, 20, 1.0),
+    ("ANNUAL", "F-15I", "CAL_DAY", 365, 0, 1.0),
+    ("LG_INSP", "F-15I", "LDG", 600, 0, 1.0),
+    ("ENG_BORESCOPE", "F-15I", "FH", 200, 0, 1.0),
+    ("ENG_BORESCOPE", "F-15I", "ENG_START", 500, 0, 1.0),
+    ("IDLE_CHECK", "F-15I", "IDLE_DAY", 21, 0, 1.0),
 ]
 
 # Major inspection per type (for "FH since last major" ML feature and hazard).
-MAJOR_INSPECTION = {"SE-100": ("I100H", 100.0), "TP-200": ("A_CHECK", 500.0), "JT-300": ("A_CHECK", 500.0)}
+MAJOR_INSPECTION = {"SE-100": ("I100H", 100.0), "TP-200": ("A_CHECK", 500.0), "JT-300": ("A_CHECK", 500.0),
+                    "F-16I": ("PHASE", 300.0), "F-15I": ("PHASE", 400.0)}
 
 PERMIT_TYPES = [
     # code, name_he, is_grounding, is_required

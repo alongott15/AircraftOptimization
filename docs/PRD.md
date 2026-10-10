@@ -259,13 +259,13 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
 
 | Capability | POC | Production |
 |-----------|-----|-----------|
-| Data | Generated SQLite example DB (24 aircraft, 18 months history) | Vertica read views + PostgreSQL app store |
+| Data | Generated SQLite example DB (34 aircraft incl. 10 fighters, 18 months history) | Vertica read views + PostgreSQL app store |
 | Auth | Local demo users with roles | OIDC/SAML SSO |
 | 3D | Procedural models by type | Optional glTF models per type |
 | ML | Trained on synthetic history | Trained on lake history, scheduled retraining |
 | Optimization | Single mission | + multi-mission horizon |
 
-## 11. Demo script (5 minutes)
+## 11. Demo script (6 minutes)
 
 1. Dashboard: red banner, KPIs — point out `4X-S03` (annual inspection expired) and `4X-P05` (COA expired).
 2. Open `4X-J04` in 3D: red hotspot on engine #2 (grounding oil leak), tail number on the fin.
@@ -276,6 +276,9 @@ Priority: **M** = Must (POC), **S** = Should (POC if time), **C** = Could (pilot
    `4X-P01` recommended as best-fit (uses remaining hours before A-check), `4X-P03` excluded by 0.2 h.
 6. Mission "טיסת מעבר ארוכה": 1 aircraft, 7 h, OVERWATER → turboprops excluded by endurance, `4X-J06` excluded
    because insurance expires mid-flight. Accept → assignment + audit log.
+7. Fleet → 3D apron: the fighter squadrons at בסיס מזרח (F-16I-like `4X-F*`, F-15I-like `4X-R*` in desert camouflage).
+   Mission "גיחת אימון קרב": 4 aircraft, NIGHT, 1.5 h, scope = squadrons 41 + 42 → only fighters are candidates
+   (`SQUADRON_NOT_SELECTED` for the rest); switch the scope to type F-15I → only `4X-R*` remain.
 
 ## 12. Open questions (confirm with the business before production)
 

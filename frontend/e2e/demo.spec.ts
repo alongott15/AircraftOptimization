@@ -72,6 +72,24 @@ test('aircraft 4X-J04: 3D (or 2D fallback) highlights the grounding MA on engine
   await expect(page.getByTestId('ma-list')).toContainText('MA-2026-00412');
 });
 
+test('aircraft 4X-S02: a hotspot on every zone with open items (the first overlay must not render empty)', async ({ page }) => {
+  await login(page, 'ops');
+  await page.goto('/aircraft/4X-S02');
+  await expect(page.locator('[data-testid="aircraft-viewer"], [data-testid="aircraft-fallback"]')).toBeVisible();
+  const zones = page.locator('button.ao-hotspot[data-zone]');
+  await expect(zones).toHaveCount(3);
+  expect((await zones.evaluateAll((els) => els.map((e) => e.getAttribute('data-zone')))).sort())
+    .toEqual(['COCKPIT', 'FUSELAGE', 'GEAR_MAIN']);
+});
+
+test('fighter 4X-R02 (F-15I-like): squadron and open item on engine 2', async ({ page }) => {
+  await login(page, 'ops');
+  await page.goto('/aircraft/4X-R02');
+  await expect(page.getByTestId('aircraft-title')).toContainText('4X-R02');
+  await expect(page.getByText('טייסת 42 — קרב (רעם)')).toBeVisible();
+  await expect(page.locator('button.ao-hotspot[data-zone="ENGINE_2"]')).toHaveCount(1);
+});
+
 test('mission M-A: plan in Hebrew, see reasons, assign', async ({ page }) => {
   await login(page, 'planner');
   await page.getByRole('link', { name: 'תכנון משימה' }).click();
@@ -164,7 +182,7 @@ test('fleet apron shows every aircraft in 3D and opens it on click', async ({ pa
   await page.goto('/fleet');
   await page.getByTestId('fleet-3d-btn').click();
   await expect(page.getByTestId('fleet-apron')).toBeVisible();
-  await expect(page.locator('button.ao-hotspot[data-tail]')).toHaveCount(24);
+  await expect(page.locator('button.ao-hotspot[data-tail]')).toHaveCount(34);
   await expect(page.locator('button.ao-hotspot[data-tail="4X-J04"]')).toHaveAttribute('data-status', 'EXPIRED');
   await page.locator('button.ao-hotspot[data-tail="4X-J04"]').click();
   await expect(page).toHaveURL(/\/aircraft\/4X-J04$/);

@@ -5,7 +5,7 @@ import { ContactShadows, Html, OrbitControls, Text as Text3D } from '@react-thre
 import { Canvas, useThree } from '@react-three/fiber';
 import { IconArrowsMaximize, IconEye, IconEyeOff, IconRotate360, IconView360 } from '@tabler/icons-react';
 import tailFontUrl from '@fontsource/heebo/files/heebo-latin-700-normal.woff?url';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AircraftDetail } from '../../api/types';
 import { useNames } from '../../components/results';
@@ -63,6 +63,9 @@ export default function AircraftViewer({ detail, selectedZone, onSelectZone }: V
   const names = useNames();
   const reducedMotion = useReducedMotion();
   const [webgl] = useState(hasWebGL);
+  // Stable mount target for drei <Html>: otherwise the first overlay mounts before the canvas event target is
+  // connected, is re-attached on connect and stays empty (a missing hotspot).
+  const host = useRef<HTMLDivElement>(null);
   const [preset, setPreset] = useState<Preset>('iso');
   const [nonce, setNonce] = useState(0);
   const [showHotspots, setShowHotspots] = useState(true);
@@ -89,7 +92,7 @@ export default function AircraftViewer({ detail, selectedZone, onSelectZone }: V
   ];
 
   return (
-    <div className="ao-viewer" data-testid="aircraft-viewer" data-selected-zone={selectedZone ?? ''}
+    <div ref={host} className="ao-viewer" data-testid="aircraft-viewer" data-selected-zone={selectedZone ?? ''}
       data-zone-highlight={selectedZone ?? ''} data-expired={anyExpired ? 'true' : 'false'} role="img" aria-label={summary}
       style={{ height: 640 }}>
       <Paper withBorder p={4} radius="md" style={{ position: 'absolute', insetBlockStart: 12, insetInlineEnd: 12, zIndex: 2 }}>
@@ -181,7 +184,7 @@ export default function AircraftViewer({ detail, selectedZone, onSelectZone }: V
           const info = zones[zone];
           if (!pos || !info.items.length) return null;
           return (
-            <Html key={zone} position={pos} center zIndexRange={[10, 0]}>
+            <Html key={zone} position={pos} center wrapperClass="ao-html" portal={host as React.RefObject<HTMLElement>} zIndexRange={[10, 0]}>
               <button type="button" className={`ao-hotspot${info.tone === 'EXPIRED' && pulse ? ' ao-pulse' : ''}`}
                 style={{ background: hotspotColor(info), outline: selectedZone === zone ? '3px solid #5B8DEF' : undefined }}
                 data-zone={zone} data-tone={info.tone ?? 'OK'} aria-label={`${tk(`zone.${zone}`)}: ${info.items.length}`}

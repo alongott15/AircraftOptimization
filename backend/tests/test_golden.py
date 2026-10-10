@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import timedelta
 from typing import Any
 
@@ -21,9 +22,14 @@ M_B = MissionRequest("הובלת נוסעים", MissionType.TRANSPORT, 3, T0 + t
 M_C = MissionRequest("טיסת מעבר ארוכה", MissionType.FERRY, 1, T0 + timedelta(hours=3), 7.0, 1, 0, 1, "CEN",
                      frozenset({"OVERWATER"}), EngineRequirement.MIN_2)
 
+M_F = MissionRequest("גיחת אימון קרב", MissionType.TRAINING, 4, T0 + timedelta(hours=2), 1.5, 1, 2, 1, "EST",
+                     frozenset({"NIGHT"}), squadron_codes=frozenset({"SQ-41", "SQ-42"}))
+
 SE = [f"4X-S0{i}" for i in range(1, 9)]
 TP = [f"4X-P{i:02d}" for i in range(1, 11)]
 JT = [f"4X-J0{i}" for i in range(1, 7)]
+F16 = [f"4X-F0{i}" for i in range(1, 7)]
+F15 = [f"4X-R0{i}" for i in range(1, 5)]
 
 
 def run(fleet: Fleet, m: MissionRequest) -> dict[str, EligibilityResult]:
@@ -43,7 +49,7 @@ def has(result: EligibilityResult, code: str, **params: Any) -> bool:
     ("4X-P04", "UNKNOWN"),
     *[(t, "EXPIRING_SOON") for t in ("4X-P02", "4X-S05", "4X-P01", "4X-P03", "4X-J06", "4X-P06", "4X-P08")],
     *[(t, "OK") for t in ("4X-S01", "4X-S02", "4X-S04", "4X-S06", "4X-S08", "4X-P07", "4X-P09", "4X-P10",
-                          "4X-J01", "4X-J05", "4X-J03", "4X-J04")],
+                          "4X-J01", "4X-J05", "4X-J03", "4X-J04", *F16, *F15)],
 ])
 def test_fleet_status_at_t0(fleet: Fleet, tail: str, status: str) -> None:
     assert str(aircraft_status(fleet.aircraft[tail], fleet.policy, fleet.ctx).compliance_status) == status
@@ -131,3 +137,45 @@ def test_mission_c(fleet: Fleet) -> None:
         assert has(r[t], "ENGINE_REQUIREMENT_NOT_MET")
         assert has(r[t], "ENDURANCE_EXCEEDED")
         assert has(r[t], "QUALIFICATION_MISSING", qualification_code="OVERWATER")
+
+
+# ── §4.5 fighters (SC-17) ───────────────────────────────────────────────
+def test_fighter_fleet(fleet: Fleet) -> None:
+    for tails, type_code, shape, squadron in ((F16, "F-16I", "FIGHTER_SINGLE", "SQ-41"),
+                                              (F15, "F-15I", "FIGHTER_TWIN", "SQ-42")):
+        for t in tails:
+            a = fleet.aircraft[t]
+            assert (a.aircraft_type.type_code, a.aircraft_type.model_shape) == (type_code, shape)
+            assert (a.base_code, a.squadron_code, str(a.status)) == ("EST", squadron, "OPERATIONAL")
+            assert {q.qualification_code for q in a.qualifications} == {"IFR", "NIGHT", "OVERWATER"}
+            assert all(str(m.severity) != "GROUNDING" for m in a.maintenance_actions)
+
+
+def test_fighters_excluded_from_golden_missions(fleet: Fleet) -> None:
+    a, b, c = run(fleet, M_A), run(fleet, M_B), run(fleet, M_C)
+    for t in F16:  # single engine, 2.4 h endurance
+        assert has(a[t], "ENDURANCE_EXCEEDED", required_hours=2.88, max_hours=2.4)
+        assert has(b[t], "QUALIFICATION_MISSING", qualification_code="PAX")
+        assert has(c[t], "ENGINE_REQUIREMENT_NOT_MET") and has(c[t], "ENDURANCE_EXCEEDED")
+    for t in F15:  # twin engine, 3.2 h endurance
+        assert has(a[t], "ENGINE_REQUIREMENT_NOT_MET")
+        assert has(b[t], "QUALIFICATION_MISSING", qualification_code="PAX")
+        assert has(c[t], "ENDURANCE_EXCEEDED", required_hours=8.05, max_hours=3.2)
+
+
+def test_mission_f_fighter_sortie(fleet: Fleet) -> None:
+    r = run(fleet, M_F)
+    assert {t for t, x in r.items() if x.eligible} == set(F16 + F15)
+    for t in SE + TP + JT:
+        assert has(r[t], "SQUADRON_NOT_SELECTED")
+    scored = [score_candidate(x, ScoringInputs(fleet.aircraft[t].aircraft_type.type_code, "EST", 0.05, 20, 20, 5),
+                              "EST", fleet.policy) for t, x in r.items() if x.eligible]
+    sel = select([SelectionCandidate(s.aircraft_id, s.inputs.type_code, "EST", s.score) for s in scored], 4)
+    assert sel.status == "OPTIMAL" and len(sel.sets[0].aircraft_ids) == 4
+
+
+def test_mission_f_type_scope(fleet: Fleet) -> None:
+    r = run(fleet, replace(M_F, squadron_codes=frozenset(), type_codes=frozenset({"F-15I"})))
+    assert {t for t, x in r.items() if x.eligible} == set(F15)
+    for t in F16:
+        assert has(r[t], "AIRCRAFT_TYPE_NOT_SELECTED")

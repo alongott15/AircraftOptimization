@@ -46,12 +46,15 @@ PROFILES = {
     "SE-100": TypeProfile(0.55, 1.4, (("TRAINING", 0.9), ("OTHER", 0.1)), (800, 6000), 1.6),
     "TP-200": TypeProfile(0.45, 2.2, (("TRANSPORT", 0.6), ("TRAINING", 0.3), ("FERRY", 0.1)), (2000, 12000), 0.3),
     "JT-300": TypeProfile(0.35, 3.5, (("TRANSPORT", 0.8), ("FERRY", 0.2)), (3000, 15000), 0.0),
+    "F-16I": TypeProfile(0.5, 1.3, (("TRAINING", 0.85), ("OTHER", 0.15)), (1500, 5000), 0.2),
+    "F-15I": TypeProfile(0.45, 1.6, (("TRAINING", 0.8), ("OTHER", 0.2)), (2000, 7000), 0.15),
 }
 
 def squadron_of(type_code: str, base_code: str) -> str:
-    """Demo squadrons: trainers by base, turboprops by base, all jets in one squadron."""
+    """Demo squadrons: trainers and turboprops by base, one squadron per fighter type, all jets in one squadron."""
     return {("SE-100", "NTH"): "SQ-11", ("SE-100", "CEN"): "SQ-12", ("TP-200", "CEN"): "SQ-21",
-            ("TP-200", "STH"): "SQ-22"}.get((type_code, base_code), "SQ-31")
+            ("TP-200", "STH"): "SQ-22", ("F-16I", "EST"): "SQ-41",
+            ("F-15I", "EST"): "SQ-42"}.get((type_code, base_code), "SQ-31")
 
 
 FLEET: list[tuple[str, str, str]] = (
@@ -59,6 +62,21 @@ FLEET: list[tuple[str, str, str]] = (
     + [(f"4X-P{i:02d}", "TP-200", "CEN" if i <= 5 else "STH") for i in range(1, 11)]
     + [(f"4X-J0{i}", "JT-300", "CEN") for i in range(1, 7)]
 )
+# Fighter squadrons (F-16I "סופה", F-15I "רעם"). Generated after everything else from their own random stream, so
+# the original 24 aircraft and every golden scenario stay byte-identical.
+FIGHTERS: list[tuple[str, str, str]] = (
+    [(f"4X-F{i:02d}", "F-16I", "EST") for i in range(1, 7)]
+    + [(f"4X-R{i:02d}", "F-15I", "EST") for i in range(1, 5)]
+)
+FIGHTER_SEED_SALT = 0xF16
+# Harmless open items on fighters (monitor / MEL deferrals well inside their limits) so the 3D viewer shows something.
+# (tail, title, ATA, zone, severity, opened days ago, deferral days left or None)
+FIGHTER_OPEN_MAS: list[tuple[str, str, int, str, str, float, float | None]] = [
+    ("4X-F02", "שריטה בכיסוי תא הטייס", 56, "COCKPIT", "MONITOR", 3, None),
+    ("4X-F04", "נורית ניווט בכנף שמאל אינה פועלת", 33, "WING_L", "DEFERRED", 2, 30),
+    ("4X-R02", "רעידות קלות במנוע מס׳ 2 בסל״ד גבוה", 72, "ENGINE_2", "MONITOR", 1, None),
+    ("4X-R03", "דליפה הידראולית קלה בכן הנסע הראשי", 32, "GEAR_MAIN", "DEFERRED", 4, 40),
+]
 
 
 @dataclass
@@ -98,6 +116,7 @@ class Generator:
         self.s = session
         self.t0 = anchor
         self.rng = random.Random(seed)
+        self.seed = seed
         self.demo_password = demo_password
         self.ma_seq = 1000  # scenario MAs use fixed numbers below 1000 (MA-2026-00398 / 00412)
         self.flight_seq = 0
@@ -135,22 +154,39 @@ class Generator:
 
     # ── 2–3. fleet + simulation ─────────────────────────────────────────
     def fleet(self) -> None:
-        types = {t[0]: t for t in ref.AIRCRAFT_TYPES}
         for idx, (tail, type_code, base) in enumerate(FLEET, start=1):
-            age_years = self.rng.uniform(3, 18)
-            row = orm.AircraftRow(
-                aircraft_id=idx, tail_number=tail, serial_number=f"{type_code.replace('-', '')}-{idx:04d}",
-                type_code=type_code, base_code=base, squadron_code=squadron_of(type_code, base), status="OPERATIONAL",
-                manufacture_date=(self.t0 - timedelta(days=365 * age_years)).date(),
-                last_flight_at=None, source_updated_at=self.t0)
-            self.s.add(row)
-            self.s.flush()
-            engines = types[type_code][2]
-            reliability = math.exp(self.rng.gauss(0, RELIABILITY_SIGMA))
-            if tail == "4X-S02":
-                reliability = math.exp(RELIABILITY_SIGMA * 1.645)  # 95th percentile — SC-12
-            state = self._simulate(row, engines, reliability)
-            self._finalize_aircraft(row, engines, state)
+            self._aircraft(idx, tail, type_code, base)
+
+    def fighters(self) -> None:
+        """Fighter squadrons, after scenarios/app store, with a separate random stream (see FIGHTERS)."""
+        self.rng = random.Random(self.seed ^ FIGHTER_SEED_SALT)
+        ids = {tail: idx for idx, (tail, _, _) in enumerate(FIGHTERS, start=len(FLEET) + 1)}
+        for tail, type_code, base in FIGHTERS:
+            self._aircraft(ids[tail], tail, type_code, base)
+        for tail, title, ata, zone, severity, days_ago, deferral_days in FIGHTER_OPEN_MAS:
+            self.s.add(orm.MaintenanceActionRow(
+                ma_number=self._ma_number(), aircraft_id=ids[tail], title=title, ata_chapter=ata, zone_code=zone,
+                severity=severity, mel_category="C" if deferral_days else None, status="OPEN",
+                opened_at=self.t0 - timedelta(days=days_ago), source_updated_at=self.t0,
+                deferral_expires_at=None if deferral_days is None else self.t0 + timedelta(days=deferral_days)))
+        self.s.flush()
+
+    def _aircraft(self, idx: int, tail: str, type_code: str, base: str) -> None:
+        types = {t[0]: t for t in ref.AIRCRAFT_TYPES}
+        age_years = self.rng.uniform(3, 18)
+        row = orm.AircraftRow(
+            aircraft_id=idx, tail_number=tail, serial_number=f"{type_code.replace('-', '')}-{idx:04d}",
+            type_code=type_code, base_code=base, squadron_code=squadron_of(type_code, base), status="OPERATIONAL",
+            manufacture_date=(self.t0 - timedelta(days=365 * age_years)).date(),
+            last_flight_at=None, source_updated_at=self.t0)
+        self.s.add(row)
+        self.s.flush()
+        engines = types[type_code][2]
+        reliability = math.exp(self.rng.gauss(0, RELIABILITY_SIGMA))
+        if tail == "4X-S02":
+            reliability = math.exp(RELIABILITY_SIGMA * 1.645)  # 95th percentile — SC-12
+        state = self._simulate(row, engines, reliability)
+        self._finalize_aircraft(row, engines, state)
 
     def _simulate(self, ac: orm.AircraftRow, engines: int, reliability: float) -> SimState:
         prof = PROFILES[ac.type_code]
@@ -437,6 +473,7 @@ def generate(out: Path, anchor: datetime, seed: int, demo_password: str) -> None
         gen.fleet()
         gen.scenarios()
         gen.app_store()
+        gen.fighters()
         session.commit()
     engine.dispose()
 

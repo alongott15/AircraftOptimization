@@ -75,12 +75,12 @@ docker compose up --build   # offline POC on 127.0.0.1:8080 (needs .env from mak
 ```
 Demo users: `admin`, `planner`, `maint`, `ops` — password = `APP_DEMO_PASSWORD` in `.env`.
 
-## Implementation status (2026-10-09)
+## Implementation status (2026-10-10)
 
 Done: compliance engine (R1–R13 + later-assignment protection, fail-safe data rules OPT §2.4a, commitments counted
 since the counter snapshot with per-flight buffers, unblock hints), scoring + CP-SAT selector with alternatives &
-hangar term, multi-mission horizon planner (FR-46), ML (defect risk AUC≈0.75, utilization EWMA, duration-buffer P90)
-with SHA-256 registry, seed generator with SC-01…SC-16, FastAPI API (local + OIDC SSO keyed by issuer|subject, CSRF,
+hangar term, multi-mission horizon planner (FR-46), ML (defect risk AUC≈0.72 with fighters, utilization EWMA, duration-buffer P90)
+with SHA-256 registry, seed generator with SC-01…SC-17 (34 aircraft incl. F-16I/F-15I fighter squadrons at EST), FastAPI API (local + OIDC SSO keyed by issuer|subject, CSRF,
 RBAC, jti revocation, append-only audit, problem+json), Alembic migrations for the app store (`0001`–`0004`),
 Vertica adapter over `ao_v_*` views (defensive parsing, verified TLS in prod, contract-tested on SQLite), Hebrew RTL
 React app (dashboard, fleet + 3D apron, aircraft + realistic procedural 3D models — trainer, turboprop, business jet,
@@ -90,7 +90,7 @@ audit; dashboard alerts for assigned missions that lost eligibility; 14/30/90-da
 "תוך … ועד …" per activity unit — mission ranking preference FR-34 replacing the buffer fields, fleet filters FR-14; mission scope by
 squadron and aircraft type FR-35), `make user` CLI, CI
 workflow, Docker compose verified. Security review and two compliance-safety review passes (2026-10-09) addressed.
-Tests: 402 backend (+1 perf, +1 real-Vertica skip), 31 vitest, 11 Playwright E2E. PRD §6 FR-01…FR-82 audited
+Tests: 416 backend (+1 perf, +1 real-Vertica skip), 31 vitest, 13 Playwright E2E. PRD §6 FR-01…FR-82 audited
 2026-10-09: all implemented.
 
 Not yet: native-speaker review of `he.ts` (self-reviewed only); integration against a real Vertica and a real IdP

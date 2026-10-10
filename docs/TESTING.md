@@ -9,7 +9,7 @@ Everything runs offline and deterministically (`FrozenClock`, fixed seeds, singl
 |-------|---------|-------|-----------------|
 | Domain unit | pytest | `domain/compliance`, `domain/optimization` | ≥ 95 % lines **and** branches |
 | Property-based | hypothesis | safety invariants (§3.2) | all invariants |
-| Golden scenarios | pytest + seeded DB | SC-01…SC-16 × M-A/M-B/M-C (§4) | 100 % of table rows |
+| Golden scenarios | pytest + seeded DB | SC-01…SC-17 × M-A/M-B/M-C/M-F (§4) | 100 % of table rows |
 | ML | pytest | features, leakage, metrics, fallback | — |
 | API | pytest + httpx `AsyncClient` | contract, validation, authz matrix, errors | every endpoint |
 | Backend overall | pytest-cov | | ≥ 85 % |
@@ -85,7 +85,7 @@ Must include, at minimum:
 
 ## 4. Golden scenarios (seeded DB, `tests/scenarios/test_golden.py`)
 
-Missions M-A, M-B, M-C from DATABASE.md §6.5; scenarios SC-01…SC-16 from §6.2. Assert eligibility, **exact reason codes
+Missions M-A, M-B, M-C, M-F from DATABASE.md §6.5; scenarios SC-01…SC-17 from §6.2. Assert eligibility, **exact reason codes
 present** (other reasons may also be present unless stated), and key params.
 
 ### 4.1 Fleet status at T0 (no mission)
@@ -97,6 +97,7 @@ present** (other reasons may also be present unless stated), and key params.
 | 4X-J04 | derived_status GROUNDED | `open_grounding_mas == 1` |
 | 4X-J03 | operational_status IN_MAINTENANCE | |
 | 4X-S01, 4X-S02, 4X-S04, 4X-S06, 4X-S08, 4X-P07, 4X-P09, 4X-P10, 4X-J01, 4X-J05 | OK | healthy defaults must not trip "expiring soon" thresholds |
+| 4X-F01…F06 (F-16I, SQ-41), 4X-R01…R04 (F-15I, SQ-42) | OK | base EST, shapes FIGHTER_SINGLE / FIGHTER_TWIN, quals IFR + NIGHT + OVERWATER, no grounding MA (SC-17) |
 
 ### 4.2 M-A — אימון לילה (2 × SINGLE, NIGHT, 2.5 h, 1 LDG + 6 T&G, T0 + 2 h)
 | Tail | Eligible | Must contain |
@@ -107,7 +108,8 @@ present** (other reasons may also be present unless stated), and key params.
 | 4X-S05 | ✗ | `INSPECTION_DUE_BEFORE_MISSION_END {inspection_code: LG_INSP, unit: LDG, remaining: 5, required: 8}`; hint `UNBLOCK_MAX_LANDINGS {max_landings_plus_tg: 4}` |
 | 4X-S07 | ✗ | `IDLE_LIMIT_EXCEEDED {limit_days: 30}` |
 | 4X-S08 | ✗ | `ALREADY_ASSIGNED` ("אימון בוקר — משימה קיימת") |
-| all 4X-P*, 4X-J* | ✗ | `ENGINE_REQUIREMENT_NOT_MET` |
+| all 4X-P*, 4X-J*, 4X-R* | ✗ | `ENGINE_REQUIREMENT_NOT_MET` |
+| all 4X-F* | ✗ | `ENDURANCE_EXCEEDED {required_hours: 2.88, max_hours: 2.4}` (single-engine, but 2.5 h × 1.15 > 2.4 h) |
 
 Recommended set: 2 of {S01, S04, S06}; `solver_status = OPTIMAL`; ≥ 1 alternative.
 
@@ -128,6 +130,7 @@ Recommended set: 2 of {S01, S04, S06}; `solver_status = OPTIMAL`; ≥ 1 alternat
 | 4X-J04 | ✗ | `GROUNDING_MA_OPEN {ma_number: MA-2026-00412, zone_code: ENGINE_2}` |
 | 4X-J06 | ✗ | `PERMIT_EXPIRES_BEFORE_MISSION_END {permit_type_code: INSURANCE}` |
 | all 4X-S* | ✗ | `ENGINE_REQUIREMENT_NOT_MET` |
+| all 4X-F*, 4X-R* | ✗ | `QUALIFICATION_MISSING {qualification_code: PAX}` |
 
 `n_eligible == 7`, recommended set size 3.
 
@@ -141,6 +144,15 @@ Recommended set: 2 of {S01, S04, S06}; `solver_status = OPTIMAL`; ≥ 1 alternat
 | 4X-J04 | ✗ | `GROUNDING_MA_OPEN` |
 | 4X-J06 | ✗ | `PERMIT_EXPIRES_BEFORE_MISSION_END {permit_type_code: INSURANCE}`; hint `UNBLOCK_RENEW_PERMIT`; **no** `UNBLOCK_LATEST_END` (latest end ≤ start) |
 | all 4X-S* | ✗ | `ENGINE_REQUIREMENT_NOT_MET`, `ENDURANCE_EXCEEDED`, `QUALIFICATION_MISSING {qualification_code: OVERWATER}` |
+| all 4X-F* | ✗ | `ENGINE_REQUIREMENT_NOT_MET`, `ENDURANCE_EXCEEDED` |
+| all 4X-R* | ✗ | `ENDURANCE_EXCEEDED {required_hours: 8.05, max_hours: 3.2}` |
+
+### 4.4a M-F — גיחת אימון קרב (4 × ANY, NIGHT, 1.5 h, 1 LDG + 2 T&G, T0 + 2 h, scope SQ-41 + SQ-42)
+| Tail | Eligible | Must contain |
+|------|----------|--------------|
+| all 4X-F*, 4X-R* | ✓ | — (recommended set of 4, `OPTIMAL`) |
+| all 4X-S*, 4X-P*, 4X-J* | ✗ | `SQUADRON_NOT_SELECTED` |
+| scope by type F-15I instead: all 4X-F* | ✗ | `AIRCRAFT_TYPE_NOT_SELECTED`; only 4X-R* eligible |
 
 ### 4.5 Snapshot
 Full `OptimizationRun` JSON for M-A/M-B/M-C (stub risk) is snapshotted in `tests/scenarios/snapshots/`. Any diff must be
