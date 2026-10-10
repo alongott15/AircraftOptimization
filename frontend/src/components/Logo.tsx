@@ -1,25 +1,19 @@
-/** Product mark "אוריון" (DESIGN_SYSTEM.md §2.7): the Orion constellation in a night sky — the hourglass of seven
- *  stars with the three-star belt, warm Betelgeuse and blue-white Rigel — and an aircraft departing it along a dotted
- *  contrail. Same artwork as public/favicon.svg. Decorative: the product name is always written next to it. */
+/** Product mark "אוריון" (DESIGN_SYSTEM.md §2.7): Orion's belt as a flight path — the three belt stars rise
+ *  diagonally across a night-sky badge and an aircraft continues the line as its next point; faint Betelgeuse (warm)
+ *  and Rigel (blue-white) hint at the rest of the constellation. Same artwork as public/favicon.svg.
+ *  Decorative: the product name is always written next to it. */
 import { useId } from 'react';
 
 type Star = { x: number; y: number; r: number; color: string; warm?: boolean };
 
-// Positions as Orion is seen in the sky: Betelgeuse upper-left, Rigel lower-right, the belt rising to the right.
 const STARS: Star[] = [
-  { x: 19.5, y: 15.5, r: 3.4, color: '#FFB566', warm: true }, // Betelgeuse
-  { x: 42.5, y: 18, r: 2.7, color: '#EAF2FF' }, // Bellatrix
-  { x: 26.5, y: 33.5, r: 2.6, color: '#FFFFFF' }, // Alnitak
-  { x: 32, y: 31.5, r: 2.6, color: '#FFFFFF' }, // Alnilam
-  { x: 37.5, y: 29.5, r: 2.6, color: '#FFFFFF' }, // Mintaka
-  { x: 23, y: 49, r: 2.6, color: '#EAF2FF' }, // Saiph
-  { x: 45.5, y: 47, r: 3.6, color: '#CFE6FF' }, // Rigel
+  { x: 15, y: 18, r: 2, color: '#FFB566', warm: true }, // Betelgeuse
+  { x: 47, y: 49, r: 2.2, color: '#CFE6FF' }, // Rigel
+  { x: 18, y: 43, r: 4, color: '#FFFFFF' }, // belt: Alnitak
+  { x: 28, y: 35, r: 4.4, color: '#FFFFFF' }, // belt: Alnilam
+  { x: 38, y: 27, r: 4, color: '#FFFFFF' }, // belt: Mintaka
 ];
-// shoulders, shoulders → belt, the belt, belt → feet, feet (indices into STARS)
-const LINES: [number, number][] = [[0, 1], [0, 2], [1, 4], [2, 4], [2, 5], [4, 6], [5, 6]];
-const DUST: [number, number, number][] = [
-  [9, 10, 0.5], [54, 8, 0.45], [11, 40, 0.35], [56, 30, 0.4], [14, 57, 0.35], [52, 57, 0.3], [33, 9, 0.35], [6, 26, 0.3],
-];
+const DUST: [number, number, number][] = [[10, 12, 0.45], [55, 52, 0.35], [8, 30, 0.3], [30, 8, 0.35], [58, 34, 0.3]];
 const PLANE =
   'M32 9 C33.6 11 34.4 14 34.4 18 L34.4 25 L50 36.5 L50 40.5 L34.4 35 L34.4 44 L40.5 49.5 L40.5 52.5 L32 50 ' +
   'L23.5 52.5 L23.5 49.5 L29.6 44 L29.6 35 L14 40.5 L14 36.5 L29.6 25 L29.6 18 C29.6 14 30.4 11 32 9 Z';
@@ -35,7 +29,7 @@ export function LogoMark({ size = 30 }: { size?: number }) {
           <stop offset="1" stopColor="#2D57B0" />
         </linearGradient>
         <radialGradient id={`${id}-glow`}>
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.55" />
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.6" />
           <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
         </radialGradient>
         <radialGradient id={`${id}-warm`}>
@@ -45,23 +39,15 @@ export function LogoMark({ size = 30 }: { size?: number }) {
       </defs>
       <rect width="64" height="64" rx="15" fill={`url(#${id}-sky)`} />
       {DUST.map(([x, y, o]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="0.9" fill="#FFFFFF" fillOpacity={o} />)}
-      {LINES.map(([a, b]) => {
-        const s = STARS.at(a);
-        const e = STARS.at(b);
-        return s && e ? (
-          <line key={`${a}-${b}`} x1={s.x} y1={s.y} x2={e.x} y2={e.y} stroke="#A9C3EA" strokeOpacity="0.5"
-            strokeWidth="1.5" strokeLinecap="round" />
-        ) : null;
-      })}
+      <path d="M13 47 L50 17.5" stroke="#7FE3FF" strokeOpacity="0.55" strokeWidth="1.6" strokeLinecap="round"
+        strokeDasharray="0.1 3.4" />
       {STARS.map((s) => (
         <g key={`${s.x}-${s.y}`}>
-          <circle cx={s.x} cy={s.y} r={s.r * 2.4} fill={`url(#${id}-${s.warm ? 'warm' : 'glow'})`} />
+          <circle cx={s.x} cy={s.y} r={s.r * 2.3} fill={`url(#${id}-${s.warm ? 'warm' : 'glow'})`} />
           <circle cx={s.x} cy={s.y} r={s.r} fill={s.color} />
         </g>
       ))}
-      <path d="M44.5 25.5 Q48.5 20.5 51 15.5" fill="none" stroke="#7FE3FF" strokeOpacity="0.7" strokeWidth="1.6"
-        strokeLinecap="round" strokeDasharray="0.1 3" />
-      <path d={PLANE} fill="#FFFFFF" transform="translate(53.5 10.5) rotate(40) scale(0.36) translate(-32 -30)" />
+      <path d={PLANE} fill="#FFFFFF" transform="translate(50.5 16.5) rotate(51.34) scale(0.42) translate(-32 -30)" />
     </svg>
   );
 }

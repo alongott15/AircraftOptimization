@@ -76,10 +76,10 @@ verify with a contrast unit test over the token table.
 - Global `AlertBanner` sits directly under the header on every page while any expired item exists.
 
 ### 2.7 Logo
-- Product name **אוריון** (Orion). Mark (`components/Logo.tsx` `LogoMark`, same artwork in `public/favicon.svg`): the
-  Orion constellation in a night-sky badge (gradient `#050B1E` → `#132B5E` → `#2D57B0`) — the hourglass of seven
-  stars joined by thin lines, the three-star belt at its centre, warm Betelgeuse (`#FFB566`) and blue-white Rigel —
-  with an aircraft departing the constellation along a dotted cyan contrail: the fleet, read off the sky.
+- Product name **אוריון** (Orion). Mark (`components/Logo.tsx` `LogoMark`, same artwork in `public/favicon.svg`):
+  Orion's belt as a flight path — the three belt stars rise diagonally across a night-sky badge (gradient `#050B1E` →
+  `#132B5E` → `#2D57B0`) along a dotted cyan line, and an aircraft continues the line as its next point; faint warm
+  Betelgeuse (`#FFB566`) and blue-white Rigel hint at the rest of the constellation.
 - Always paired with the product name (`app.title`), so the mark is decorative (`aria-hidden`). Sizes: header 30 px,
   login 56 px, browser tab 16 px. The badge carries its own background, so it works on light and dark themes alike.
 
